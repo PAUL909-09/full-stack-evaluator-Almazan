@@ -20,6 +20,7 @@ public class TasksController : ControllerBase
         _db = db;
     }
 
+    // --- ADMIN: Create Task ---
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreateTask([FromBody] TaskItem t)
@@ -29,6 +30,7 @@ public class TasksController : ControllerBase
         return CreatedAtAction(nameof(GetTask), new { id = t.Id }, t);
     }
 
+    // --- GET Single Task ---
     [HttpGet("{id}")]
     public async Task<IActionResult> GetTask(Guid id)
     {
@@ -37,6 +39,7 @@ public class TasksController : ControllerBase
         return Ok(task);
     }
 
+    // --- ADMIN: Assign Task to Employee ---
     [HttpPost("{id}/assign")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AssignTask(Guid id, [FromBody] AssignDto dto)
@@ -49,6 +52,24 @@ public class TasksController : ControllerBase
         return Ok();
     }
 
+    // --- EMPLOYEE: Update Own Task Status ---
+    [HttpPatch("{id}/status")]
+    [Authorize(Roles = "Employee")] // Only employees can update their own tasks
+    public async Task<IActionResult> UpdateTaskStatus(Guid id, [FromBody] UpdateStatusDto dto)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var task = await _db.Tasks.FindAsync(id);
+        if (task == null) return NotFound();
+
+        if (task.AssignedTo != userId)
+            return Forbid("You can only update your own tasks.");
+
+        task.Status = dto.Status;
+        await _db.SaveChangesAsync();
+        return Ok(task);
+    }
+
+    // --- GET All Tasks ---
     [HttpGet]
     public async Task<IActionResult> GetTasks([FromQuery] Guid? assignedTo, [FromQuery] ModelTaskStatus? status)
     {
@@ -66,4 +87,6 @@ public class TasksController : ControllerBase
     }
 }
 
+// --- DTOs ---
 public record AssignDto(Guid AssignedTo);
+public record UpdateStatusDto(ModelTaskStatus Status);
