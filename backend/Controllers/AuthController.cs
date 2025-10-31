@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using task_manager_api.Services;   // <-- correct namespace
 using task_manager_api.Models;
 
-namespace FullStackEvaluator.Controllers
+namespace task_manager_api.Controllers
 {
     [ApiController]
     [Route("api/auth")]

@@ -1,63 +1,69 @@
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Threading.Tasks;
-
-using task_manager_api.Models;
+using System.Security.Claims;
 using task_manager_api.Data;
-namespace TaskManager.API
+using task_manager_api.Models;
+
+// Avoid TaskStatus conflict
+using ModelTaskStatus = task_manager_api.Models.TaskStatus;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class TasksController : ControllerBase
 {
-    [Route("tasks")]
-    [ApiController]
-    public class TasksController : ControllerBase
+    private readonly ApplicationDbContext _db;
+
+    public TasksController(ApplicationDbContext db)
     {
-        private readonly ApplicationDbContext _context;
+        _db = db;
+    }
 
-        public TasksController(ApplicationDbContext context)
-        {
-            _context = context;
-        }
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> CreateTask([FromBody] TaskItem t)
+    {
+        await _db.Tasks.AddAsync(t);
+        await _db.SaveChangesAsync();
+        return CreatedAtAction(nameof(GetTask), new { id = t.Id }, t);
+    }
 
-        [HttpGet]
-        public async Task<IActionResult> Get()
-        {
-            
-            var tasks = await _context.Tasks.ToListAsync();
-            return Ok(tasks);
-        }
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetTask(Guid id)
+    {
+        var task = await _db.Tasks.FindAsync(id);
+        if (task == null) return NotFound();
+        return Ok(task);
+    }
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] TaskItem task)
-        {
-            
-            _context.Tasks.Add(task);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(Get), new { id = task.Id }, task);
-        }
+    [HttpPost("{id}/assign")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> AssignTask(Guid id, [FromBody] AssignDto dto)
+    {
+        var task = await _db.Tasks.FindAsync(id);
+        if (task == null) return NotFound();
 
-        [HttpPut("{id}")] 
-        public async Task<IActionResult> Update(int id, [FromBody] TaskItem updated)
-        {
-            var task = await _context.Tasks.FindAsync(id);
-            if (task == null) return NotFound();
+        task.AssignedTo = dto.AssignedTo;
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
 
-            task.Title = updated.Title;
-            task.IsDone = updated.IsDone;
-            await _context.SaveChangesAsync();
+    [HttpGet]
+    public async Task<IActionResult> GetTasks([FromQuery] Guid? assignedTo, [FromQuery] ModelTaskStatus? status)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var userRole = User.FindFirstValue(ClaimTypes.Role);
 
-            return Ok(task);
-        }
+        if (userRole != "Admin" && assignedTo != userId)
+            return Forbid();
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var task = await _context.Tasks.FindAsync(id);
-            if (task == null) return NotFound();
+        var query = _db.Tasks.AsQueryable();
+        if (assignedTo.HasValue) query = query.Where(t => t.AssignedTo == assignedTo);
+        if (status.HasValue) query = query.Where(t => t.Status == status.Value);
 
-            _context.Tasks.Remove(task);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
+        return Ok(await query.ToListAsync());
     }
 }
+
+public record AssignDto(Guid AssignedTo);
