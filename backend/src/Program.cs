@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
-DotNetEnv.Env.Load(); // Load environment variables from .env if present
+DotNetEnv.Env.Load(); // Loads .env for local development
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,25 +14,50 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// --- Swagger Configuration ---
+// ✅ Swagger with JWT support
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "TaskManager API",
         Version = "v1",
-        Description = "Full Stack Evaluator Backend API with JWT Authentication"
+        Description = "Full Stack Evaluator Backend API"
+    });
+
+    // ✅ Add JWT authentication to Swagger
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "Enter 'Bearer' [space] and then your JWT token.",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
     });
 });
 
-// --- Database Configuration ---
+// --- Database Context ---
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// --- Add Custom Services ---
+// --- Services ---
 builder.Services.AddScoped<AuthService>();
 
-// --- JWT Authentication Configuration ---
+// --- JWT Authentication ---
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -49,13 +74,13 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!)
         ),
-        ClockSkew = TimeSpan.Zero // Token expires exactly at the expiration time
+        ClockSkew = TimeSpan.Zero
     };
 });
 
 builder.Services.AddAuthorization();
 
-// --- CORS Policy (allow React frontend to connect) ---
+// --- CORS Policy (for your React app) ---
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
@@ -66,19 +91,19 @@ builder.Services.AddCors(options =>
     });
 });
 
-// --- Build App ---
+// --- Build the app ---
 var app = builder.Build();
 
 // --- Middleware Pipeline ---
+// if (app.Environment.IsDevelopment())
+// {
+//     app.UseSwagger();
+//     app.UseSwaggerUI();
+// }
 app.UseSwagger();
-app.UseSwaggerUI(c =>
-{
-    c.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskManager API v1");
-    c.RoutePrefix = "swagger"; // Access via /swagger
-});
-
+app.UseSwaggerUI();
 app.UseCors("AllowReactApp");
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
