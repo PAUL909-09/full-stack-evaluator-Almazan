@@ -1,12 +1,15 @@
+using System;
 
-
-namespace TaskManager.Models
+namespace task_manager_api.Models
 {
+    public enum Role { Admin, Evaluator, Employee }
+
     public class User
-{
-    public int Id { get; set; }
-    public string Email { get; set; } = string.Empty;
-    public string PasswordHash { get; set; } = string.Empty;
-    public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
-}
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Name { get; set; } = null!;
+        public string Email { get; set; } = null!;
+        public string PasswordHash { get; set; } = null!;
+        public Role Role { get; set; }
+    }
 }
