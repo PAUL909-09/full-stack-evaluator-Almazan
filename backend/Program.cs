@@ -6,23 +6,31 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
-DotNetEnv.Env.Load();
+DotNetEnv.Env.Load(); // Loads .env for local development
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --- Add services ---
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "TaskManager API", Version = "v1" });
+    c.SwaggerDoc("v1", new OpenApiInfo 
+    { 
+        Title = "TaskManager API", 
+        Version = "v1",
+        Description = "Full Stack Evaluator Backend API"
+    });
 });
 
+// --- Database Context ---
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-builder.Services.AddScoped<AuthService>(); // ✅ Register AuthService
+// --- Services ---
+builder.Services.AddScoped<AuthService>();
 
-// ✅ JWT configuration
+// --- JWT Authentication ---
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -37,10 +45,15 @@ builder.Services.AddAuthentication(options =>
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!))
+            Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!)
+        ),
+        ClockSkew = TimeSpan.Zero // tokens expire exactly at the expiration time
     };
 });
 
+builder.Services.AddAuthorization();
+
+// --- CORS Policy (for your React app) ---
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
@@ -51,8 +64,10 @@ builder.Services.AddCors(options =>
     });
 });
 
+// --- Build the app ---
 var app = builder.Build();
 
+// --- Middleware Pipeline ---
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -62,7 +77,6 @@ if (app.Environment.IsDevelopment())
 app.UseCors("AllowReactApp");
 app.UseHttpsRedirection();
 
-// ✅ Add auth middleware
 app.UseAuthentication();
 app.UseAuthorization();
 
