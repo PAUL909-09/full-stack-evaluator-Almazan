@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using task_manager_api.Models;
 using BCrypt.Net;   // for seeding
 
-// <-- Add the alias here
+// Alias for our enum (avoids clash with System.Threading.Tasks.TaskStatus)
 using ModelTaskStatus = task_manager_api.Models.TaskStatus;
 
 namespace task_manager_api.Data
@@ -51,9 +51,16 @@ namespace task_manager_api.Data
                 .HasForeignKey(e => e.EvaluatorId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // ---- Seeding ------------------------------------------------------------
-            var adminId = Guid.Parse("11111111-1111-1111-1111-111111111111");
-            var adminHash = BCrypt.Net.BCrypt.HashPassword("adminpassword"); // change in prod!
+            // ---- Seeding (STATIC GUIDS + STATIC PASSWORD HASHES) --------------------
+            var adminId      = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            var evaluatorId  = Guid.Parse("22222222-2222-2222-2222-222222222222");
+            var employeeId   = Guid.Parse("33333333-3333-3333-3333-333333333333");
+            var sampleTaskId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+
+            // Static (pre-generated) BCrypt password hashes (use 'dotnet script' or online tool to generate new ones)
+            var adminHash     = "$2a$11$AJcog84r2bDESTqn7iI.5eGLKz8/V.8rePpO/E0FMpnROLR5KyTOm"; // for "adminpassword"
+            var evaluatorHash = "$2a$11$BMyhxw8kJXMWxp7YdageUOQBXPsk5I3BfOEoHo7OrGcGLS9fQPOmy"; // for "evalpass"
+            var employeeHash  = "$2a$11$WBWqeQ.RX2e0SJf0KJFU0eHPU0YbTvhYD8NYX8QR8gVhwFONuo3nW"; // for "employeepass"
 
             modelBuilder.Entity<User>().HasData(
                 new User
@@ -63,34 +70,32 @@ namespace task_manager_api.Data
                     Email = "admin@example.com",
                     PasswordHash = adminHash,
                     Role = Role.Admin
-                });
-
-            modelBuilder.Entity<User>().HasData(
+                },
                 new User
                 {
-                    Id = Guid.NewGuid(),
+                    Id = evaluatorId,
                     Name = "Evaluator User",
                     Email = "evaluator@example.com",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("evalpass"),
+                    PasswordHash = evaluatorHash,
                     Role = Role.Evaluator
                 },
                 new User
                 {
-                    Id = Guid.NewGuid(),
+                    Id = employeeId,
                     Name = "Employee User",
                     Email = "employee@example.com",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("employeepass"),
+                    PasswordHash = employeeHash,
                     Role = Role.Employee
                 });
 
-            // Sample task (unassigned) – use the alias
+            // ---- Sample Task ---------------------------------------------------------
             modelBuilder.Entity<TaskItem>().HasData(
                 new TaskItem
                 {
-                    Id = Guid.NewGuid(),
+                    Id = sampleTaskId,
                     Title = "Sample Task – finish the report",
                     IsDone = false,
-                    Status = ModelTaskStatus.Pending,   // <-- fixed
+                    Status = ModelTaskStatus.Pending,
                     Score = 0m
                 });
         }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using task_manager_api.Data;
@@ -11,9 +12,11 @@ using task_manager_api.Data;
 namespace task_manager_api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251031091738_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -86,7 +89,7 @@ namespace task_manager_api.Migrations
                     b.HasData(
                         new
                         {
-                            Id = new Guid("69c9d9a8-aa4d-4d6f-90ee-57529d3e835e"),
+                            Id = new Guid("44444444-4444-4444-4444-444444444444"),
                             IsDone = false,
                             Score = 0m,
                             Status = 0,
@@ -128,23 +131,23 @@ namespace task_manager_api.Migrations
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             Email = "admin@example.com",
                             Name = "Admin User",
-                            PasswordHash = "$2a$11$.WP2DZxs.kYpmwC0OHWEzORqmSWD.dHIdSbN/Gkjjh6q3y7Ej4gMW",
+                            PasswordHash = "$2a$11$jZrRWH7iz4ZlZE9T03hTwuv7eYUQwVzyJnYkQJleGYhe6C.CPY37C",
                             Role = 0
                         },
                         new
                         {
-                            Id = new Guid("2da95f81-f170-40ce-8e09-fb1d3e16b260"),
+                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
                             Email = "evaluator@example.com",
                             Name = "Evaluator User",
-                            PasswordHash = "$2a$11$CnemFt7zfbT1rKqpEXeVbu3qluWjTqGbL9vIcHjhTsH.tf5hGOKom",
+                            PasswordHash = "$2a$11$MYR9oOUxQO.rXRBhgMdiW.cJ4ECVrZyKK/NX8F6Xf.waOKgXwa5bO",
                             Role = 1
                         },
                         new
                         {
-                            Id = new Guid("643dc815-8b58-494c-8353-7a2329b07fd6"),
+                            Id = new Guid("33333333-3333-3333-3333-333333333333"),
                             Email = "employee@example.com",
                             Name = "Employee User",
-                            PasswordHash = "$2a$11$g8HGMbfKDe7fqCeXRJRlJucZuEF20RKMKkNydHO77Pyr19p3e4zeC",
+                            PasswordHash = "$2a$11$fj52817o25WtfmM7P2Lj8O5g6foEFdFgqqzjDRvlb75PvOzovQShe",
                             Role = 2
                         });
                 });
