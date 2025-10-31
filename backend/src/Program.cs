@@ -6,31 +6,33 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
-DotNetEnv.Env.Load(); // Loads .env for local development
+DotNetEnv.Env.Load(); // Load environment variables from .env if present
 
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Add services ---
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// --- Swagger Configuration ---
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo 
-    { 
-        Title = "TaskManager API", 
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "TaskManager API",
         Version = "v1",
-        Description = "Full Stack Evaluator Backend API"
+        Description = "Full Stack Evaluator Backend API with JWT Authentication"
     });
 });
 
-// --- Database Context ---
+// --- Database Configuration ---
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// --- Services ---
+// --- Add Custom Services ---
 builder.Services.AddScoped<AuthService>();
 
-// --- JWT Authentication ---
+// --- JWT Authentication Configuration ---
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -47,13 +49,13 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!)
         ),
-        ClockSkew = TimeSpan.Zero // tokens expire exactly at the expiration time
+        ClockSkew = TimeSpan.Zero // Token expires exactly at the expiration time
     };
 });
 
 builder.Services.AddAuthorization();
 
-// --- CORS Policy (for your React app) ---
+// --- CORS Policy (allow React frontend to connect) ---
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
@@ -64,15 +66,16 @@ builder.Services.AddCors(options =>
     });
 });
 
-// --- Build the app ---
+// --- Build App ---
 var app = builder.Build();
 
 // --- Middleware Pipeline ---
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskManager API v1");
+    c.RoutePrefix = "swagger"; // Access via /swagger
+});
 
 app.UseCors("AllowReactApp");
 app.UseHttpsRedirection();
