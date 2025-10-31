@@ -8,7 +8,7 @@ using task_manager_api.Data;               // <-- ApplicationDbContext
 using task_manager_api.Models;
 using BCrypt.Net;                            // <-- BCrypt.Net-Next
 
-namespace FullStackEvaluator.Services
+namespace task_manager_api.Services
 {
     public class AuthService
     {
