@@ -4,15 +4,12 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import CreateTask from "./pages/admin/CreateTask";
-import { authService } from "./api/authService";
-import { Toaster } from "@/components/ui/toaster"; // ← ADD THIS
-export default function App() {
-  const user = authService.getCurrentUser();
+import { Toaster } from "@/components/ui/toaster";
+import { Protected, AdminOnly } from "./components/RouteGuards";  // ← Moved guards here
+import useAuthCheck from "./hooks/useAuthCheck";  // ← Added custom hook
 
-  const Protected = ({ children }) =>
-    user ? children : <Navigate to="/login" replace />;
-  const AdminOnly = ({ children }) =>
-    user && user.role === "Admin" ? children : <Navigate to="/login" replace />;
+export default function App() {
+  useAuthCheck();  // ← Runs token expiration check on mount
 
   return (
     <BrowserRouter>

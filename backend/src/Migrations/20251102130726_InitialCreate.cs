@@ -3,8 +3,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
-
 namespace task_manager_api.Migrations
 {
     /// <inheritdoc />
@@ -79,19 +77,9 @@ namespace task_manager_api.Migrations
                 });
 
             migrationBuilder.InsertData(
-                table: "Tasks",
-                columns: new[] { "Id", "AssignedTo", "IsDone", "Score", "Status", "Title" },
-                values: new object[] { new Guid("44444444-4444-4444-4444-444444444444"), null, false, 0m, 0, "Sample Task – finish the report" });
-
-            migrationBuilder.InsertData(
                 table: "Users",
                 columns: new[] { "Id", "Email", "Name", "PasswordHash", "Role" },
-                values: new object[,]
-                {
-                    { new Guid("11111111-1111-1111-1111-111111111111"), "admin@example.com", "Admin User", "$2a$11$jZrRWH7iz4ZlZE9T03hTwuv7eYUQwVzyJnYkQJleGYhe6C.CPY37C", 0 },
-                    { new Guid("22222222-2222-2222-2222-222222222222"), "evaluator@example.com", "Evaluator User", "$2a$11$MYR9oOUxQO.rXRBhgMdiW.cJ4ECVrZyKK/NX8F6Xf.waOKgXwa5bO", 1 },
-                    { new Guid("33333333-3333-3333-3333-333333333333"), "employee@example.com", "Employee User", "$2a$11$fj52817o25WtfmM7P2Lj8O5g6foEFdFgqqzjDRvlb75PvOzovQShe", 2 }
-                });
+                values: new object[] { new Guid("11111111-1111-1111-1111-111111111111"), "admin@example.com", "Admin User", "$2a$11$AJcog84r2bDESTqn7iI.5eGLKz8/V.8rePpO/E0FMpnROLR5KyTOm", 0 });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Evaluations_EvaluatorId",

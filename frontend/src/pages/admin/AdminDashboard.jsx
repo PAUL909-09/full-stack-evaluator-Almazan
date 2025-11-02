@@ -60,8 +60,6 @@ export default function AdminDashboard() {
                   className="mt-3 w-full border rounded px-2 py-1 text-sm"
                 >
                   <option value="">Assign to...</option>
-                  <option value="33333333-3333-3333-3333-333333333333">John Doe (Employee)</option>
-                  {/* Add more from API later */}
                 </select>
               )}
             </div>
