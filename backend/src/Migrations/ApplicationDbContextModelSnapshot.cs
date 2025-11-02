@@ -82,16 +82,6 @@ namespace task_manager_api.Migrations
                     b.HasIndex("AssignedTo");
 
                     b.ToTable("Tasks");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("44444444-4444-4444-4444-444444444444"),
-                            IsDone = false,
-                            Score = 0m,
-                            Status = 0,
-                            Title = "Sample Task – finish the report"
-                        });
                 });
 
             modelBuilder.Entity("task_manager_api.Models.User", b =>
@@ -130,22 +120,6 @@ namespace task_manager_api.Migrations
                             Name = "Admin User",
                             PasswordHash = "$2a$11$AJcog84r2bDESTqn7iI.5eGLKz8/V.8rePpO/E0FMpnROLR5KyTOm",
                             Role = 0
-                        },
-                        new
-                        {
-                            Id = new Guid("22222222-2222-2222-2222-222222222222"),
-                            Email = "evaluator@example.com",
-                            Name = "Evaluator User",
-                            PasswordHash = "$2a$11$BMyhxw8kJXMWxp7YdageUOQBXPsk5I3BfOEoHo7OrGcGLS9fQPOmy",
-                            Role = 1
-                        },
-                        new
-                        {
-                            Id = new Guid("33333333-3333-3333-3333-333333333333"),
-                            Email = "employee@example.com",
-                            Name = "Employee User",
-                            PasswordHash = "$2a$11$WBWqeQ.RX2e0SJf0KJFU0eHPU0YbTvhYD8NYX8QR8gVhwFONuo3nW",
-                            Role = 2
                         });
                 });
 
