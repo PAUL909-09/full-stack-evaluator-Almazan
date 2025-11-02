@@ -1,3 +1,4 @@
+// frontend\src\pages\Login.jsx (updated)
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { authService } from "@/api/authService";
@@ -17,23 +18,20 @@ export default function Login() {
     e.preventDefault();
     setError(null);
     try {
-      await authService.login(email, password);
+      await authService.login(email, password);  // ← Calls backend /api/auth/login
       const user = authService.getCurrentUser();
       if (!user) return navigate("/login");
-      // route by role
-      if (user.role === "Admin") navigate("/dashboard/admin");
-      else if (user.role === "Evaluator") navigate("/dashboard/evaluator");
-      else navigate("/dashboard/employee");
+      navigate("/dashboard");  // Single dashboard for all roles
     } catch (err) {
-      setError(err?.message || String(err));
+      setError(err.message);  // ← Shows backend error like "Invalid credentials"
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-white">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-gray-700">
       <Card className="w-[420px]">
         <CardHeader className="text-center">
-          <img src={logo} alt="logo" className="mx-auto h-16" />
+          <img src={logo} alt="logo" className="mx-auto h-16 " />
           <CardTitle>Sign in</CardTitle>
         </CardHeader>
         <CardContent>

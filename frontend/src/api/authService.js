@@ -1,27 +1,55 @@
+// frontend\src\api\authService.js
 import api from "./axios";
 
+const TOKEN_KEY = "token";
+
 export const authService = {
-  login: async (email, password) => {
-    const res = await api.post("/auth/login", { email, password });
-    localStorage.setItem("token", res.data.token);
-    return res.data;
+  async login(email, password) {
+    try {
+      const response = await api.post("/auth/login", { email, password });  // ← Backend API call
+      const { token } = response.data;
+      if (token) {
+        localStorage.setItem(TOKEN_KEY, token);
+        return token;
+      }
+      throw new Error("No token from backend");
+    } catch (err) {
+      throw new Error(err.response?.data || "Login failed - check credentials or backend");
+    }
   },
-  register: async (name, email, password, role) => {
-    const res = await api.post("/auth/register", { name, email, password, role });
-    return res.data;
+
+  async register(name, email, password, role = "Employee") {
+    try {
+      const response = await api.post("/auth/register", { name, email, password, role });  // ← Backend API call
+      return response.data;
+    } catch (err) {
+      throw new Error(err.response?.data || "Register failed - check if email exists");
+    }
   },
-  logout: () => {
-    localStorage.removeItem("token");
-    window.location.href = "/login";
-  },
-  getCurrentUser: () => {
-    const token = localStorage.getItem("token");
+
+  getCurrentUser() {
+    const token = localStorage.getItem(TOKEN_KEY);
     if (!token) return null;
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
-      return payload;
-    } catch {
+      return {
+        id: payload["nameid"],  // ← Matches backend ClaimTypes.NameIdentifier
+        email: payload.email,
+        role: payload.role,
+      };
+    } catch (err) {
+      localStorage.removeItem(TOKEN_KEY);
+      console.error("Bad token:", err);
       return null;
     }
+  },
+
+  // logout() {
+  //   localStorage.removeItem(TOKEN_KEY);
+  //   window.location.href = "/login";
+  // },
+  logout() {
+    localStorage.removeItem("token");  // ← MUST CLEAR
+    window.location.href = "/login";   // ← Force reload
   },
 };

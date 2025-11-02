@@ -1,15 +1,43 @@
-import Tasks from "./pages/Tasks";
-import "./index.css";
+// src/App.jsx
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import CreateTask from "./pages/admin/CreateTask";
+import { authService } from "./api/authService";
+import { Toaster } from "@/components/ui/toaster"; // ← ADD THIS
+export default function App() {
+  const user = authService.getCurrentUser();
 
-function App() {
+  const Protected = ({ children }) =>
+    user ? children : <Navigate to="/login" replace />;
+  const AdminOnly = ({ children }) =>
+    user && user.role === "Admin" ? children : <Navigate to="/login" replace />;
+
   return (
-    <div className="app">
-      <h1 className="text-3xl font-bold text-center my-6">
-        📝 React Task Evaluator
-      </h1>
-      <Tasks />
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/dashboard"
+          element={
+            <Protected>
+              <Dashboard />
+            </Protected>
+          }
+        />
+        <Route
+          path="/admin/tasks/create"
+          element={
+            <AdminOnly>
+              <CreateTask />
+            </AdminOnly>
+          }
+        />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+      <Toaster />
+    </BrowserRouter>
   );
 }
-
-export default App;

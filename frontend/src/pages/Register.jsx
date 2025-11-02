@@ -1,6 +1,7 @@
+// frontend/src/pages/Register.jsx
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { authService } from "@/api/authService";
+import api from "@/api/axios";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,23 +9,28 @@ import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 
 export default function Register() {
-  const [name,setName]=useState("");
-  const [email,setEmail]=useState("");
-  const [password,setPassword]=useState("");
-  const [role,setRole]=useState("Employee");
-  const [error,setError]=useState(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [role, setRole] = useState(1);  // ← 1 = Employee
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  async function handleSubmit(e) {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     try {
-      await authService.register(name,email,password,role);
+      await api.post("/auth/register", {
+        Name: name,
+        Email: email,
+        Password: password,
+        Role: role  // ← int: 1 or 2
+      });
       navigate("/login");
     } catch (err) {
-      setError(err?.message || String(err));
+      setError(err.response?.data?.message || "Registration failed");
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-white">
@@ -37,21 +43,25 @@ export default function Register() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label>Full name</Label>
-              <Input value={name} onChange={(e)=>setName(e.target.value)} required />
+              <Input value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
             <div>
               <Label>Email</Label>
-              <Input value={email} onChange={(e)=>setEmail(e.target.value)} type="email" required />
+              <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required />
             </div>
             <div>
               <Label>Password</Label>
-              <Input value={password} onChange={(e)=>setPassword(e.target.value)} type="password" required />
+              <Input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
             </div>
             <div>
               <Label>Role</Label>
-              <select value={role} onChange={e=>setRole(e.target.value)} className="w-full border rounded px-3 py-2">
-                <option value="Employee">Employee</option>
-                <option value="Evaluator">Evaluator</option>
+              <select
+                value={role}
+                onChange={(e) => setRole(Number(e.target.value))}
+                className="w-full border rounded px-3 py-2"
+              >
+                <option value={1}>Employee</option>
+                <option value={2}>Evaluator</option>
               </select>
             </div>
             {error && <div className="text-red-500 text-sm">{error}</div>}

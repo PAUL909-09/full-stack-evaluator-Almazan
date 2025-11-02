@@ -11,7 +11,10 @@ DotNetEnv.Env.Load(); // Loads .env for local development
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Add services ---
-builder.Services.AddControllers();
+// In Program.cs
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true);
 builder.Services.AddEndpointsApiExplorer();
 
 // ✅ Swagger with JWT support
@@ -94,16 +97,9 @@ builder.Services.AddCors(options =>
 // --- Build the app ---
 var app = builder.Build();
 
-// --- Middleware Pipeline ---
-// if (app.Environment.IsDevelopment())
-// {
-//     app.UseSwagger();
-//     app.UseSwaggerUI();
-// }
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors("AllowReactApp");
-// app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
