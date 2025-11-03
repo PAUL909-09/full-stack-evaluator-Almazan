@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using task_manager_api.Services;   // <-- correct namespace
+using task_manager_api.Services;
 using task_manager_api.Models;
 
 namespace task_manager_api.Controllers
@@ -15,39 +15,77 @@ namespace task_manager_api.Controllers
             _authService = authService;
         }
 
-        // POST api/auth/login
+        // =============================================================
+        // 🧩 LOGIN (Employee, Evaluator, or Admin)
+        // =============================================================
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             var token = await _authService.Login(dto.Email, dto.Password);
             if (token == null)
-                return Unauthorized("Invalid credentials");
+                return Unauthorized(new { Message = "Invalid credentials or unverified email." });
 
             return Ok(new { Token = token });
         }
 
-        // POST api/auth/register
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
+        // // =============================================================
+        // 📩 INVITE USER (Admin or Evaluator)
+        // =============================================================
+        [HttpPost("invite")]
+        public async Task<IActionResult> Invite([FromBody] InviteRequestDto dto)  // Changed from InviteDto
         {
             try
             {
-                var user = await _authService.Register(
-                    dto.Name,
-                    dto.Email,
-                    dto.Password,
-                    dto.Role ?? Role.Employee);
-
-                return CreatedAtAction(nameof(Register), new { id = user.Id }, user);
+                if (string.IsNullOrWhiteSpace(dto.Email))
+                    return BadRequest(new { Message = "Email is required." });
+                var name = dto.Name ?? "Invited User";
+                var role = dto.Role ?? Role.Employee;
+                var user = await _authService.InviteUserAsync(name, dto.Email, role);
+                return Ok(new
+                {
+                    Message = $"Invite sent to {dto.Email}. OTP valid for 5 minutes.",
+                    user.Email,
+                    Role = user.Role.ToString()
+                });
             }
             catch (Exception ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(new { Message = ex.Message });
             }
         }
 
-        // ---------- DTOs ----------
+        // =============================================================
+        // ✅ VERIFY OTP (User enters OTP from email)
+        // =============================================================
+        [HttpPost("verify-otp")]
+        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDto dto)
+        {
+            var verified = await _authService.VerifyOtpAsync(dto.Email, dto.OtpCode);
+            if (!verified)
+                return BadRequest(new { Message = "Invalid or expired OTP." });
+
+            return Ok(new { Message = "Email verified successfully." });
+        }
+
+        // =============================================================
+        // 🔑 SET PASSWORD (After OTP verification)
+        // =============================================================
+        [HttpPost("set-password")]
+        public async Task<IActionResult> SetPassword([FromBody] SetPasswordDto dto)
+        {
+            var success = await _authService.SetPasswordAsync(dto.Email, dto.Password);
+            if (!success)
+                return BadRequest(new { Message = "User not found or not verified." });
+
+            return Ok(new { Message = "Password set successfully. You may now log in." });
+        }
+
+        // =============================================================
+        // DTOs
+        // =============================================================
         public record LoginDto(string Email, string Password);
-        public record RegisterDto(string Name, string Email, string Password, Role? Role);
+        public record InviteRequestDto(string? Name, string Email, Role? Role);
+        public record VerifyOtpDto(string Email, string OtpCode);
+        public record SetPasswordDto(string Email, string Password);
     }
 }

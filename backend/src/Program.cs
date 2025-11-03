@@ -59,6 +59,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // ===== Services =====
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<EmailService>();
 
 // ===== JWT Auth =====
 var jwtSecret = builder.Configuration["Jwt:Secret"]

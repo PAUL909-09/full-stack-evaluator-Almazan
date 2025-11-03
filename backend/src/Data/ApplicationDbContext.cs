@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using task_manager_api.Models;
 using BCrypt.Net;   // for seeding
 
-
 namespace task_manager_api.Data
 {
     public class ApplicationDbContext : DbContext
@@ -19,6 +18,7 @@ namespace task_manager_api.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // -------- Relationships --------
             modelBuilder.Entity<Project>()
                 .HasOne(p => p.Evaluator)
                 .WithMany()
@@ -43,12 +43,12 @@ namespace task_manager_api.Data
                 .HasForeignKey<Evaluation>(e => e.TaskId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-                // ---- Seeding (STATIC GUIDS + STATIC PASSWORD HASHES) --------------------
-            var adminId      = Guid.Parse("11111111-1111-1111-1111-111111111111");
+            // -------- Seeding Admin User --------
+            var adminId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
-            // Static (pre-generated) BCrypt password hashes (use 'dotnet script' or online tool to generate new ones)
-            var adminHash     = "$2a$11$AJcog84r2bDESTqn7iI.5eGLKz8/V.8rePpO/E0FMpnROLR5KyTOm"; // for "adminpassword"
-          
+            // Static bcrypt hash for password "adminpassword"
+            var adminHash = "$2a$11$AJcog84r2bDESTqn7iI.5eGLKz8/V.8rePpO/E0FMpnROLR5KyTOm";
+
             modelBuilder.Entity<User>().HasData(
                 new User
                 {
@@ -56,8 +56,12 @@ namespace task_manager_api.Data
                     Name = "Admin User",
                     Email = "admin@example.com",
                     PasswordHash = adminHash,
-                    Role = Role.Admin
-                });           
+                    Role = Role.Admin,
+                    IsEmailVerified = true, // ✅ admin is always verified
+                    OtpCode = null,
+                    OtpExpiresAt = null
+                }
+            );
         }
     }
 }

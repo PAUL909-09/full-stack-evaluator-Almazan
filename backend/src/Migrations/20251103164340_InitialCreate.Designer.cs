@@ -12,7 +12,7 @@ using task_manager_api.Data;
 namespace task_manager_api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251103100326_InitialCreate")]
+    [Migration("20251103164340_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -154,9 +154,18 @@ namespace task_manager_api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsEmailVerified")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("OtpCode")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("OtpExpiresAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -174,6 +183,7 @@ namespace task_manager_api.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             Email = "admin@example.com",
+                            IsEmailVerified = true,
                             Name = "Admin User",
                             PasswordHash = "$2a$11$AJcog84r2bDESTqn7iI.5eGLKz8/V.8rePpO/E0FMpnROLR5KyTOm",
                             Role = 0

@@ -19,7 +19,10 @@ namespace task_manager_api.Migrations
                     Name = table.Column<string>(type: "text", nullable: false),
                     Email = table.Column<string>(type: "text", nullable: false),
                     PasswordHash = table.Column<string>(type: "text", nullable: false),
-                    Role = table.Column<int>(type: "integer", nullable: false)
+                    Role = table.Column<int>(type: "integer", nullable: false),
+                    IsEmailVerified = table.Column<bool>(type: "boolean", nullable: false),
+                    OtpCode = table.Column<string>(type: "text", nullable: true),
+                    OtpExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -138,8 +141,8 @@ namespace task_manager_api.Migrations
 
             migrationBuilder.InsertData(
                 table: "Users",
-                columns: new[] { "Id", "Email", "Name", "PasswordHash", "Role" },
-                values: new object[] { new Guid("11111111-1111-1111-1111-111111111111"), "admin@example.com", "Admin User", "$2a$11$AJcog84r2bDESTqn7iI.5eGLKz8/V.8rePpO/E0FMpnROLR5KyTOm", 0 });
+                columns: new[] { "Id", "Email", "IsEmailVerified", "Name", "OtpCode", "OtpExpiresAt", "PasswordHash", "Role" },
+                values: new object[] { new Guid("11111111-1111-1111-1111-111111111111"), "admin@example.com", true, "Admin User", null, null, "$2a$11$AJcog84r2bDESTqn7iI.5eGLKz8/V.8rePpO/E0FMpnROLR5KyTOm", 0 });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Comments_TaskItemId",

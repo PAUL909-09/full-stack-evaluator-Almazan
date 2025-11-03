@@ -158,6 +158,12 @@ namespace task_manager_api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("OtpCode")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("OtpExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text");
@@ -174,7 +180,7 @@ namespace task_manager_api.Migrations
                         {
                             Id = new Guid("11111111-1111-1111-1111-111111111111"),
                             Email = "admin@example.com",
-                            IsEmailVerified = false,
+                            IsEmailVerified = true,
                             Name = "Admin User",
                             PasswordHash = "$2a$11$AJcog84r2bDESTqn7iI.5eGLKz8/V.8rePpO/E0FMpnROLR5KyTOm",
                             Role = 0

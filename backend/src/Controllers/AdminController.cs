@@ -1,37 +1,75 @@
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using task_manager_api.Services;
+using task_manager_api.Models;
 using Microsoft.EntityFrameworkCore;
 using task_manager_api.Data;
-using task_manager_api.Models;
 
 namespace task_manager_api.Controllers
 {
     [ApiController]
     [Route("api/admin")]
-    [Authorize(Roles = "Admin")]
     public class AdminController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
-        public AdminController(ApplicationDbContext db) => _db = db;
+        private readonly AuthService _authService;
+        private readonly ApplicationDbContext _context;
 
-        [HttpGet("pending-users")]
-        public async Task<IActionResult> GetPendingUsers()
+        public AdminController(AuthService authService, ApplicationDbContext context)
         {
-            var pending = await _db.Users
-                .Where(u => !u.IsEmailVerified && u.Role != Role.Admin)
-                .Select(u => new { u.Id, u.Name, u.Email, u.Role })
-                .ToListAsync();
-            return Ok(pending);
+            _authService = authService;
+            _context = context;
         }
 
-        [HttpPost("verify/{userId}")]
-        public async Task<IActionResult> VerifyUser(Guid userId)
+        // 📨 POST /api/admin/invite
+        [HttpPost("invite")]
+        public async Task<IActionResult> InviteUser([FromBody] InviteDto dto)
         {
-            var user = await _db.Users.FindAsync(userId);
-            if (user == null || user.IsEmailVerified) return NotFound("User not found or already verified");
-            user.IsEmailVerified = true;
-            await _db.SaveChangesAsync();
-            return Ok();
+            try
+            {
+                if (string.IsNullOrEmpty(dto.Email) || string.IsNullOrEmpty(dto.Name))
+                    return BadRequest(new { message = "Name and Email are required." });
+
+                if (!Enum.TryParse<Role>(dto.Role, true, out var role))
+                    return BadRequest(new { message = "Invalid role specified." });
+
+                var user = await _authService.InviteUserAsync(dto.Name, dto.Email, role);
+
+                return Ok(new
+                {
+                    message = "Invite sent successfully.",
+                    user.Email,
+                    user.Role
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        // 📋 GET /api/admin/pending-invites
+        [HttpGet("pending-invites")]
+        public async Task<IActionResult> GetPendingInvites()
+        {
+            var users = await _context.Users
+                .Where(u => !u.IsEmailVerified)
+                .Select(u => new
+                {
+                    u.Name,
+                    u.Email,
+                    Role = u.Role.ToString(),
+                    u.IsEmailVerified
+                })
+                .ToListAsync();
+
+            return Ok(users);
+        }
+
+        // DTO for invites
+        public class InviteDto
+        {
+            public string Name { get; set; } = string.Empty;
+            public string Email { get; set; } = string.Empty;
+            public string Role { get; set; } = string.Empty;
         }
     }
 }
