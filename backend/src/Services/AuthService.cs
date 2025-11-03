@@ -53,7 +53,8 @@ namespace task_manager_api.Services
                 Name = name,
                 Email = email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
-                Role = role
+                Role = role,
+                IsEmailVerified = role == Role.Admin  // ← NEW: Only Admin auto-verified
             };
 
             _db.Users.Add(user);

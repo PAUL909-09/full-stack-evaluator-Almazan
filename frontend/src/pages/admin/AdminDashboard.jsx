@@ -1,71 +1,101 @@
-// src/pages/admin/AdminDashboard.jsx
+// frontend/src/pages/Admin/AdminDashboard.jsx
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import api from "@/api/axios";
-import MainLayout from "@/components/layout/MainLayout";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdminDashboard() {
-  const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(null);
+  const { toast } = useToast();
 
+  // Fixed: Added 'toast' to dependency array
   useEffect(() => {
-    api.get("/tasks").then(res => {
-      setTasks(res.data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
+    api.get("/dashboard")
+      .then(res => setStats(res.data))
+      .catch(err => {
+        toast({
+          title: "Failed to load stats",
+          description: err.message || "Please try again later.",
+          variant: "destructive"
+        });
+      });
+  }, [toast]); // ESLint satisfied
 
-  const handleAssign = async (taskId, employeeId) => {
-    try {
-      await api.post(`/tasks/${taskId}/assign`, { assignedTo: employeeId });
-      setTasks(prev => prev.map(t =>
-        t.id === taskId ? { ...t, assignedTo: employeeId } : t
-      ));
-    } catch {
-      alert("Assign failed");
-    }
-  };
+  if (!stats) {
+    return (
+      <div className="p-8 flex items-center justify-center min-h-screen">
+        <div className="text-lg text-gray-600">Loading dashboard...</div>
+      </div>
+    );
+  }
 
   return (
-    <MainLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">All Tasks</h1>
-        <Link
-          to="/admin/tasks/create"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Create Task
-        </Link>
+    <div className="p-8 max-w-7xl mx-auto">
+      <h1 className="text-4xl font-bold mb-8 text-gray-800">Admin Dashboard</h1>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Total Users */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium text-gray-700">Total Users</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-bold text-blue-600">{stats.totalUsers}</p>
+          </CardContent>
+        </Card>
+
+        {/* Admins */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium text-gray-700">Admins</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-bold text-purple-600">{stats.admins}</p>
+          </CardContent>
+        </Card>
+
+        {/* Evaluators */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium text-gray-700">Evaluators</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-bold text-green-600">{stats.evaluators}</p>
+          </CardContent>
+        </Card>
+
+        {/* Employees */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium text-gray-700">Employees</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-bold text-orange-600">{stats.employees}</p>
+          </CardContent>
+        </Card>
+
+        {/* Projects */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium text-gray-700">Projects</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-bold text-indigo-600">{stats.projects}</p>
+          </CardContent>
+        </Card>
+
+        {/* Done Tasks */}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle className="text-lg font-medium text-gray-700">Done Tasks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-bold text-teal-600">{stats.doneTasks}</p>
+          </CardContent>
+        </Card>
+
+        
       </div>
-
-      {loading ? (
-        <p>Loading tasks...</p>
-      ) : tasks.length === 0 ? (
-        <p className="text-gray-600">No tasks yet. Create one!</p>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {tasks.map(task => (
-            <div key={task.id} className="bg-white p-4 rounded shadow">
-              <h3 className="font-semibold">{task.title}</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                Status: <span className="font-medium">{task.status}</span>
-              </p>
-              <p className="text-sm text-gray-600">
-                Assigned: {task.assignedUser?.name || "Unassigned"}
-              </p>
-
-              {!task.assignedTo && (
-                <select
-                  onChange={(e) => handleAssign(task.id, e.target.value)}
-                  className="mt-3 w-full border rounded px-2 py-1 text-sm"
-                >
-                  <option value="">Assign to...</option>
-                </select>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </MainLayout>
+    </div>
   );
 }

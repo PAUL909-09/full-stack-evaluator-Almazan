@@ -1,48 +1,82 @@
-// src/components/layout/Sidebar.jsx
-import React from "react";
+// frontend/src/components/layout/Sidebar.jsx
 import { Link, useLocation } from "react-router-dom";
-import { authService } from "@/api/authService";
+import { Home, Users, FolderPlus, FilePlus, CheckSquare } from "lucide-react";
 
-export default function Sidebar() {
-  const user = authService.getCurrentUser();
+const menuItems = {
+  Admin: [
+    { to: "/admin/dashboard", icon: Home, label: "Dashboard" },
+    { to: "/admin/verify-users", icon: Users, label: "Verify Users" },
+  ],
+  Evaluator: [
+    { to: "/evaluator/dashboard", icon: Home, label: "Dashboard" },
+    { to: "/projects/create", icon: FolderPlus, label: "New Project" },
+    { to: "/tasks/create", icon: FilePlus, label: "New Task" },
+  ],
+  Employee: [
+    { to: "/employee/dashboard", icon: Home, label: "My Tasks" },
+  ],
+};
+
+export default function Sidebar({ user, onLinkClick }) {
   const location = useLocation();
+  const currentPath = location.pathname;
+  const items = menuItems[user.role] || [];
 
-  if (!user) return null;
-
-  const menu = {
-    Admin: [
-      { to: "/dashboard", label: "All Tasks", icon: "Tasks" },
-      { to: "/admin/tasks/create", label: "Create Task", icon: "Plus" },
-    ],
-    Evaluator: [
-      { to: "/evaluations", label: "My Evaluations", icon: "Star" },
-    ],
-    Employee: [
-      { to: "/dashboard", label: "My Tasks", icon: "Check" },
-    ],
-  }[user.role] || [];
+  // SAFE: Extract name or fallback to email
+  const displayName = user.name || user.email?.split("@")[0] || "User";
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200">
-      <div className="p-5 border-b">
-        <h1 className="text-xl font-bold">Task Evaluator</h1>
+    <div className="flex flex-col h-full bg-white dark:bg-gray-800 transition-colors">
+      {/* Logo & Title */}
+      <div className="flex items-center justify-center p-6 border-b border-gray-200 dark:border-gray-700">
+        <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+          Task Evaluator
+        </h2>
       </div>
-      <nav className="p-4 space-y-1">
-        {menu.map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition ${
-              location.pathname === item.to
-                ? "bg-blue-50 text-blue-700 font-medium"
-                : "text-gray-700 hover:bg-gray-100"
-            }`}
-          >
-            <span>{item.icon}</span>
-            <span>{item.label}</span>
-          </Link>
-        ))}
+
+      {/* Navigation */}
+      <nav className="flex-1 p-4 space-y-1">
+        {items.map((item) => {
+          const isActive = currentPath === item.to;
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              onClick={onLinkClick}
+              className={`flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all duration-200 group ${
+                isActive
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400"
+              }`}
+            >
+              <item.icon
+                className={`h-5 w-5 transition-colors ${
+                  isActive ? "text-white" : "text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                }`}
+              />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
-    </aside>
+
+      {/* User Info */}
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+            {initial}
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              {displayName}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+              {user.role}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

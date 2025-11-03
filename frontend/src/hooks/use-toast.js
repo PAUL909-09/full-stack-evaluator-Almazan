@@ -5,12 +5,8 @@ import * as React from "react"
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
 
-const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST"
-}
+// Removed unused actionTypes object to fix ESLint no-unused-vars error
+// (It was defined but never referenced; strings are used directly in reducer/dispatch)
 
 let count = 0
 
