@@ -21,7 +21,6 @@ namespace task_manager_api.Controllers
             var stats = new
             {
                 TotalUsers = await _db.Users.CountAsync(),
-                Admins = await _db.Users.CountAsync(u => u.Role == Role.Admin),
                 Evaluators = await _db.Users.CountAsync(u => u.Role == Role.Evaluator),
                 Employees = await _db.Users.CountAsync(u => u.Role == Role.Employee),
 

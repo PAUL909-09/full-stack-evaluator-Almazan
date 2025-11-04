@@ -79,4 +79,19 @@ namespace task_manager_api.Controllers
 
         public record CreateProjectDto(string Name, string Description, Guid EvaluatorId);
     }
-}
+
+    // GET: api/projects/user/{userId}
+[HttpGet("user/{userId}")]
+        public async Task<IActionResult> GetUserProjects(Guid userId)
+        {
+            var projects = await _db.Projects
+                .Include(p => p.Evaluator)
+                .Include(p => p.Tasks)
+                .ThenInclude(t => t.AssignedTo)
+                .Where(p => p.EvaluatorId == userId || p.Tasks.Any(t => t.AssignedToId == userId))
+                .ToListAsync();
+
+            return Ok(projects);
+        }
+
+    }
