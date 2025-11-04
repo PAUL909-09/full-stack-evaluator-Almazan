@@ -2,23 +2,29 @@
 import api from "./axios";
 
 const TOKEN_KEY = "token";
+const REFRESH_KEY = "refreshToken";
 
 export const authService = {
   async login(email, password) {
     try {
       const response = await api.post("/auth/login", { email, password });
-      const { token } = response.data;
+      const { token, accessToken, refreshToken } = response.data;
 
-      if (!token) {
+      // Use whichever the backend provides
+      const finalToken = token || accessToken;
+      if (!finalToken) {
         throw new Error("No token received from server");
       }
 
-      // FIXED: SAVE TOKEN TO localStorage
-      localStorage.setItem(TOKEN_KEY, token);
+      // ✅ Save both tokens
+      localStorage.setItem(TOKEN_KEY, finalToken);
+      if (refreshToken) {
+        localStorage.setItem(REFRESH_KEY, refreshToken);
+      }
 
-      return token;
+      return finalToken;
     } catch (err) {
-      const message = err.response?.data || err.message || "Login failed";
+      const message = err.response?.data?.message || err.message || "Login failed";
       throw new Error(message);
     }
   },
@@ -36,7 +42,7 @@ export const authService = {
       throw new Error(err.response?.data?.message || "Verification failed");
     }
   },
-  
+
   getCurrentUser() {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) return null;
@@ -69,6 +75,7 @@ export const authService = {
 
   logout() {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_KEY);
     window.location.href = "/login";
   },
 };

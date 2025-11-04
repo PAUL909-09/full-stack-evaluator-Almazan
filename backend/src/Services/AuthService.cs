@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using task_manager_api.Helpers;
 using System;
-using BCrypt.Net;
+using System.Threading.Tasks;
 
 namespace task_manager_api.Services
 {
@@ -22,7 +22,7 @@ namespace task_manager_api.Services
                 ?? throw new InvalidOperationException("Jwt:Secret not configured");
         }
 
-        // 1️⃣ ADMIN INVITES A USER (SENDS OTP)
+        // 1️⃣ ADMIN INVITES USER (SEND OTP)
         public async Task<User> InviteUserAsync(string name, string email, Role role)
         {
             var existing = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
@@ -46,8 +46,11 @@ namespace task_manager_api.Services
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            await _emailService.SendEmailAsync(email, "Verify your account",
-                $"Hello {name},<br><br>Your OTP code is: <b>{otp}</b><br>This will expire in 5 minutes.<br><br>- PHIA Evaluator System");
+            await _emailService.SendEmailAsync(
+                email,
+                "Verify your account",
+                $"Hello {name},<br><br>Your OTP code is: <b>{otp}</b><br>This will expire in 5 minutes.<br><br>- PHIA Evaluator System"
+            );
 
             return user;
         }
@@ -57,14 +60,9 @@ namespace task_manager_api.Services
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null) return false;
-
-            // If already verified
             if (user.IsEmailVerified) return false;
-
-            // If OTP mismatch
             if (user.OtpCode != otp) return false;
 
-            // If expired -> remove pending user and return false
             if (user.OtpExpiresAt == null || OtpService.IsExpired(user.OtpExpiresAt))
             {
                 _context.Users.Remove(user);
@@ -72,7 +70,6 @@ namespace task_manager_api.Services
                 return false;
             }
 
-            // mark verified
             user.IsEmailVerified = true;
             user.OtpCode = null;
             user.OtpExpiresAt = null;
@@ -92,8 +89,8 @@ namespace task_manager_api.Services
             return true;
         }
 
-        // 4️⃣ LOGIN
-        public async Task<string?> Login(string email, string password)
+        // 4️⃣ LOGIN WITH REFRESH TOKEN SUPPORT
+        public async Task<(string AccessToken, string RefreshToken)?> Login(string email, string password)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null || !user.IsEmailVerified)
@@ -102,7 +99,24 @@ namespace task_manager_api.Services
             if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
                 return null;
 
-            return JwtTokenHelper.GenerateJwtToken(user, _jwtSecret);
+            var accessToken = JwtTokenHelper.GenerateAccessToken(user, _jwtSecret);
+            var refreshToken = JwtTokenHelper.GenerateRefreshToken();
+
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(30);
+            await _context.SaveChangesAsync();
+
+            return (accessToken, refreshToken);
+        }
+
+        // 5️⃣ VALIDATE USER (used by controller refresh endpoint)
+        public async Task<User?> ValidateUserAsync(string email, string password)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (user == null) return null;
+
+            bool valid = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
+            return valid ? user : null;
         }
     }
 }

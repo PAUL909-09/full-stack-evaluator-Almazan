@@ -13,15 +13,33 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    if (err?.response?.status === 401) {
-      localStorage.removeItem("token");
-      window.location.href = "/login";
+api.interceptors.request.use(async (config) => {
+  const token = localStorage.getItem("token");
+  const refreshToken = localStorage.getItem("refreshToken");
+
+  if (token) {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    const exp = payload.exp * 1000;
+
+    if (Date.now() > exp && refreshToken) {
+      try {
+        const res = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
+        localStorage.setItem("token", res.data.accessToken);
+        localStorage.setItem("refreshToken", res.data.refreshToken);
+        config.headers.Authorization = `Bearer ${res.data.accessToken}`;
+      } catch (err) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        window.location.href = "/login";
+        throw err;
+      }
+    } else {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    return Promise.reject(err?.response?.data?.message || err.message);
   }
-);
+  return config;
+});
+
+
 
 export default api;

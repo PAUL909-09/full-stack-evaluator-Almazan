@@ -82,8 +82,11 @@
 // }
 
 // frontend/src/components/layout/Sidebar.jsx
+
+
+
 import { Link, useLocation } from "react-router-dom";
-import { Home, Users, FolderPlus, FilePlus, CheckSquare, BarChart } from "lucide-react";
+import { Home, Users, FolderPlus, FilePlus, CheckSquare, BarChart, FolderOpen } from "lucide-react";
 
 const menuItems = {
   Admin: [
@@ -98,6 +101,7 @@ const menuItems = {
     { to: "/evaluator/dashboard", icon: Home, label: "Dashboard" },
     { to: "/projects/create", icon: FolderPlus, label: "New Project" },
     { to: "/tasks/create", icon: FilePlus, label: "New Task" },
+    { to: "/evaluator/projects", icon: FolderOpen, label: "Project List" },
   ],
   Employee: [
     { to: "/employee/dashboard", icon: Home, label: "My Tasks" },
