@@ -50,26 +50,36 @@ export default function VerifyInvite() {
           <CardTitle className="text-2xl font-bold text-sky-900">
             Verify Your Account
           </CardTitle>
-          <p className="text-sm text-sky-700 mt-1">Enter the OTP sent to your email</p>
+          <p className="text-sm text-sky-700 mt-1">
+            Enter the OTP sent to your email
+          </p>
         </CardHeader>
 
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <Label htmlFor="email" className="text-sm font-semibold text-sky-900">
+              <Label
+                htmlFor="email"
+                className="text-sm font-semibold text-sky-900"
+              >
                 Email
               </Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
-                disabled
-                className="mt-1 bg-gray-100 text-sky-900"
+                onChange={(e) => setEmail(e.target.value)} // ✅ allow editing
+                placeholder="Enter your email"
+                required
+                className="mt-1 bg-white/80 border-sky-200 focus:ring-2 focus:ring-sky-400"
               />
             </div>
 
             <div>
-              <Label htmlFor="otp" className="text-sm font-semibold text-sky-900">
+              <Label
+                htmlFor="otp"
+                className="text-sm font-semibold text-sky-900"
+              >
                 One-Time Passcode (OTP)
               </Label>
               <Input
@@ -84,7 +94,10 @@ export default function VerifyInvite() {
             </div>
 
             <div>
-              <Label htmlFor="password" className="text-sm font-semibold text-sky-900">
+              <Label
+                htmlFor="password"
+                className="text-sm font-semibold text-sky-900"
+              >
                 Set Password
               </Label>
               <div className="relative mt-1">
@@ -102,7 +115,11 @@ export default function VerifyInvite() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-sky-500 hover:text-sky-700"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </div>

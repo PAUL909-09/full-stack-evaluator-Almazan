@@ -23,16 +23,20 @@ export const authService = {
     }
   },
 
-  async register(name, email, password, role = "Employee") {
+  async verifyInvite({ email, otp, password }) {
     try {
-      const response = await api.post("/auth/register", { name, email, password, role });
+      const response = await api.post("/auth/verify-invite", {
+        email,
+        otpCode: otp,
+        password,
+      });
       return response.data;
     } catch (err) {
-      const message = err.response?.data || err.message || "Register failed";
-      throw new Error(message);
+      console.error("Verify Invite Error:", err);
+      throw new Error(err.response?.data?.message || "Verification failed");
     }
   },
-
+  
   getCurrentUser() {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) return null;
@@ -40,9 +44,21 @@ export const authService = {
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
       return {
-        id: payload["nameid"] || payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"],
-        email: payload.email || payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"],
-        role: payload.role || payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"],
+        id:
+          payload["nameid"] ||
+          payload[
+            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"
+          ],
+        email:
+          payload.email ||
+          payload[
+            "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+          ],
+        role:
+          payload.role ||
+          payload[
+            "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+          ],
       };
     } catch (err) {
       console.error("Invalid token:", err);

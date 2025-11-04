@@ -60,6 +60,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // ===== Services =====
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddHostedService<ExpiredInviteCleanupService>();
 
 // ===== JWT Auth =====
 var jwtSecret = builder.Configuration["Jwt:Secret"]

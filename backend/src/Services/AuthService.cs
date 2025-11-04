@@ -29,8 +29,8 @@ namespace task_manager_api.Services
             if (existing != null)
                 throw new InvalidOperationException("A user with this email already exists.");
 
-            var otp = OtpService.GenerateOtp();
-            var expiresAt = OtpService.GenerateExpiry();
+            var otp = OtpService.GenerateOtp(6);
+            var expiresAt = OtpService.GenerateExpiry(10);
 
             var user = new User
             {
@@ -56,13 +56,26 @@ namespace task_manager_api.Services
         public async Task<bool> VerifyOtpAsync(string email, string otp)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
-            if (user == null || user.OtpCode != otp || OtpService.IsExpired(user.OtpExpiresAt))
-                return false;
+            if (user == null) return false;
 
+            // If already verified
+            if (user.IsEmailVerified) return false;
+
+            // If OTP mismatch
+            if (user.OtpCode != otp) return false;
+
+            // If expired -> remove pending user and return false
+            if (user.OtpExpiresAt == null || OtpService.IsExpired(user.OtpExpiresAt))
+            {
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+                return false;
+            }
+
+            // mark verified
             user.IsEmailVerified = true;
             user.OtpCode = null;
             user.OtpExpiresAt = null;
-
             await _context.SaveChangesAsync();
             return true;
         }

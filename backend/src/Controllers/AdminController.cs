@@ -51,15 +51,9 @@ namespace task_manager_api.Controllers
         public async Task<IActionResult> GetPendingInvites()
         {
             var users = await _context.Users
-                .Where(u => !u.IsEmailVerified)
-                .Select(u => new
-                {
-                    u.Name,
-                    u.Email,
-                    Role = u.Role.ToString(),
-                    u.IsEmailVerified
-                })
-                .ToListAsync();
+    .Where(u => !u.IsEmailVerified && u.OtpExpiresAt != null && u.OtpExpiresAt > DateTime.UtcNow)
+    .Select(u => new { u.Name, u.Email, Role = u.Role.ToString(), u.IsEmailVerified, u.OtpExpiresAt })
+    .ToListAsync();
 
             return Ok(users);
         }

@@ -43,7 +43,7 @@ namespace task_manager_api.Controllers
                 var user = await _authService.InviteUserAsync(name, dto.Email, role);
                 return Ok(new
                 {
-                    Message = $"Invite sent to {dto.Email}. OTP valid for 5 minutes.",
+                    Message = $"Invite sent to {dto.Email}. OTP valid for 10 minutes.",
                     user.Email,
                     Role = user.Role.ToString()
                 });
@@ -57,15 +57,54 @@ namespace task_manager_api.Controllers
         // =============================================================
         // ✅ VERIFY OTP (User enters OTP from email)
         // =============================================================
-        [HttpPost("verify-otp")]
-        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDto dto)
-        {
-            var verified = await _authService.VerifyOtpAsync(dto.Email, dto.OtpCode);
-            if (!verified)
-                return BadRequest(new { Message = "Invalid or expired OTP." });
+        // [HttpPost("verify-otp")]
+        // public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpDto dto)
+        // {
+        //     var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
+        //     if (user == null) return BadRequest(new { message = "No pending invite found." });
+        //     if (OtpService.IsExpired(user.OtpExpiresAt))
+        //     {
+        //         _context.Users.Remove(user);
+        //         await _context.SaveChangesAsync();
+        //         return BadRequest(new { message = "OTP expired. Invite removed. Please ask admin to resend." });
+        //     }
+        //     var ok = await _authService.VerifyOtpAsync(dto.Email, dto.OtpCode);
+        //     if (!ok) return BadRequest(new { message = "Invalid OTP." });
+        //     return Ok(new { message = "Verified" });
+        // }
 
-            return Ok(new { Message = "Email verified successfully." });
+        [HttpPost("verify-invite")]
+        public async Task<IActionResult> VerifyInvite([FromBody] VerifyInviteDto dto)
+        {
+            try
+            {
+                Console.WriteLine($"[VerifyInvite] Email={dto.Email}, OTP={dto.OtpCode}, Password={dto.Password}");
+
+                var ok = await _authService.VerifyOtpAsync(dto.Email, dto.OtpCode);
+                if (!ok)
+                {
+                    Console.WriteLine("[VerifyInvite] Invalid or expired OTP");
+                    return BadRequest(new { message = "Invalid or expired OTP." });
+                }
+
+                var success = await _authService.SetPasswordAsync(dto.Email, dto.Password);
+                if (!success)
+                {
+                    Console.WriteLine("[VerifyInvite] Password could not be set.");
+                    return BadRequest(new { message = "Password could not be set." });
+                }
+
+                Console.WriteLine("[VerifyInvite] ✅ Verified successfully");
+                return Ok(new { message = "Account verified and password set successfully." });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[VerifyInvite] Exception: {ex.Message}");
+                return BadRequest(new { message = ex.Message });
+            }
         }
+
+
 
         // =============================================================
         // 🔑 SET PASSWORD (After OTP verification)
@@ -85,7 +124,9 @@ namespace task_manager_api.Controllers
         // =============================================================
         public record LoginDto(string Email, string Password);
         public record InviteRequestDto(string? Name, string Email, Role? Role);
-        public record VerifyOtpDto(string Email, string OtpCode);
+        // public record VerifyOtpDto(string Email, string OtpCode);
         public record SetPasswordDto(string Email, string Password);
+        public record VerifyInviteDto(string Email, string OtpCode, string Password);
+
     }
 }
