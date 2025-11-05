@@ -13,6 +13,7 @@ namespace task_manager_api.Data
         public DbSet<TaskItem> Tasks { get; set; }
         public DbSet<Comment> Comments { get; set; }
         public DbSet<Evaluation> Evaluations { get; set; }
+        public DbSet<TaskHistory> TaskHistories { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -42,6 +43,19 @@ namespace task_manager_api.Data
                 .WithOne(t => t.Evaluation)
                 .HasForeignKey<Evaluation>(e => e.TaskId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+ // Ensure Evaluation.Task - TaskItem relationship
+            modelBuilder.Entity<Evaluation>()
+                .HasOne(e => e.Task)
+                .WithOne(t => t.Evaluation)  // if TaskItem has single Evaluation property
+                .HasForeignKey<Evaluation>(e => e.TaskId);
+
+            // TaskHistory relation
+            modelBuilder.Entity<TaskHistory>()
+                .HasOne(th => th.Task)
+                .WithMany(t => t.History) // ensure TaskItem has ICollection<TaskHistory> History {get;set;}
+                .HasForeignKey(th => th.TaskId);
+
 
             // -------- Seeding Admin User --------
             var adminId = Guid.Parse("11111111-1111-1111-1111-111111111111");

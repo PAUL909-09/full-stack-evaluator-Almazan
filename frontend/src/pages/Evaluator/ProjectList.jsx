@@ -1,34 +1,29 @@
+// frontend/src/pages/evaluator/ProjectList.jsx
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import api from "@/api/axios";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import Modal from "@/components/Modal";
+import { Plus, Edit, Trash2, Folder } from "lucide-react";
+import { toast } from "react-toastify";  // ✅ Already imported, now fully used
 import ConfirmModal from "@/components/ConfirmModal";
-import DataTable from "@/components/table/DataTable"; // Added: Import DataTable component
+import DataTable from "@/components/table/DataTable";
+import CreateProjectModal from "@/components/modals/CreateProjectModal";
 
 const ProjectList = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
-  const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-  });
+  const [createModal, setCreateModal] = useState({ open: false, project: null });
 
-  const token = localStorage.getItem("token");
-
-  // Fetch projects
+  // 🔹 Fetch all projects
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:5000/api/projects", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setProjects(res.data);
+      const res = await api.get("/projects");
+      setProjects(res.data || []);
     } catch (error) {
-      console.error("Error fetching projects:", error);
+      console.error("❌ Error fetching projects:", error);
+      toast.error("Failed to load projects. Please try again.");  // ✅ Replaced alert with toast
     } finally {
       setLoading(false);
     }
@@ -38,153 +33,111 @@ const ProjectList = () => {
     fetchProjects();
   }, []);
 
-  // Handle form changes
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  // Open modal for create or edit
-  const openModal = (project = null) => {
-    if (project) {
-      setSelectedProject(project);
-      setFormData({ name: project.name, description: project.description });
-    } else {
-      setSelectedProject(null);
-      setFormData({ name: "", description: "" });
-    }
-    setModalOpen(true);
-  };
-
-  // Save (Create or Update)
-  // In handleSave function
-  const handleSave = async () => {
-    try {
-      if (selectedProject) {
-        // Update
-        await axios.put(
-          `http://localhost:5000/api/projects/${selectedProject.id}`,
-          formData,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } else {
-        // Create
-        await axios.post("http://localhost:5000/api/projects", formData, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-      setModalOpen(false);
-      fetchProjects();
-    } catch (error) {
-      console.error("Error saving project:", error);
-      // Show specific error message
-      const message = error.response?.data || "Failed to save project.";
-      alert(message); // Or use your toast system
-    }
-  };
-
-  // Delete project
+  // 🔹 Delete project
   const handleDelete = async () => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      alert("You are not logged in.");
-      return;
-    }
-  
     try {
-      await axios.delete(
-        `http://localhost:5000/api/projects/${selectedProject.id}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.delete(`/projects/${selectedProject.id}`);
       setConfirmOpen(false);
-      fetchProjects();
+      await fetchProjects(); // ✅ refresh after delete
+      toast.success("Project deleted successfully.");  // ✅ Added success toast for better feedback
     } catch (error) {
-      console.error("Error deleting project:", error);
-      if (error.response?.status === 403) {
-        alert("You are not authorized to delete this project.");
-      } else if (error.response?.status === 401) {
-        alert("Session expired. Please log in again.");
-      } else {
-        alert("Failed to delete project. Please try again.");
-      }
+      console.error("❌ Error deleting project:", error);
+      toast.error("Failed to delete project. Please try again.");  // ✅ Replaced alert with toast
     }
   };
-  
 
-  // Define columns for DataTable
+  // 🔹 Handle save (create or update)
+  const handleSaveProject = async (formData, isEdit) => {
+    try {
+      if (isEdit && createModal.project) {
+        await api.put(`/projects/${createModal.project.id}`, formData);
+      } else {
+        await api.post("/projects", formData);
+      }
+      setCreateModal({ open: false, project: null });
+      await fetchProjects(); // ✅ ensure refresh after saving
+      toast.success(`Project ${isEdit ? "updated" : "created"} successfully.`);  // ✅ Added success toast
+    } catch (error) {
+      console.error("❌ Error saving project:", error);
+      toast.error("Failed to save project. Please try again.");  // ✅ Replaced alert with toast
+    }
+  };
+
+  // 🔹 Table columns
   const columns = [
-    { key: "name", label: "Name" },
+    { key: "name", label: "Project Name" },
     { key: "description", label: "Description" },
   ];
 
-  // Define actions for DataTable (Edit and Delete buttons)
-  const actions = (project) => (
-    <div className="flex space-x-2">
-      <Button variant="outline" onClick={() => openModal(project)}>
-        Edit
-      </Button>
-      <Button
-        variant="destructive"
-        onClick={() => {
-          setSelectedProject(project);
-          setConfirmOpen(true);
-        }}
-      >
-        Delete
-      </Button>
-    </div>
-  );
-
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-semibold">Projects</h1>
-        <Button onClick={() => openModal()}>+ New Project</Button>
+    <div className="p-8 bg-gradient-to-br from-[#F8FBFF] to-[#E9F4FF] rounded-2xl shadow-inner min-h-screen">
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center space-x-3">
+          <Folder className="h-8 w-8 text-[#0A66B3]" />
+          <h1 className="text-3xl font-bold text-[#0A66B3] tracking-tight">
+            Projects
+          </h1>
+        </div>
+        <Button
+          onClick={() => setCreateModal({ open: true, project: null })}
+          className="bg-[#059669] hover:bg-[#047857] text-white rounded-lg flex items-center gap-2 shadow-md transition-all duration-200 px-4 py-2"
+        >
+          <Plus className="h-5 w-5" />
+          Create Project
+        </Button>
       </div>
 
+      {/* Data Table Section */}
       {loading ? (
-        <p>Loading...</p>
+        <div className="text-center py-16 text-gray-500 animate-pulse">
+          Loading projects...
+        </div>
       ) : (
         <DataTable
-          title="Projects" // Added: Table title
-          columns={columns} // Added: Column definitions
-          data={projects} // Added: Data array
-          actions={actions} // Added: Action buttons for each row
+          title="Projects Overview"
+          columns={columns}
+          data={projects}
+          actions={(project) => (
+            <div className="flex justify-center space-x-3">
+              {/* Edit Button */}
+              <button
+                onClick={() => setCreateModal({ open: true, project })}
+                className="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow-md transition"
+                title="Edit Project"
+              >
+                <Edit className="h-4 w-4" />
+              </button>
+
+              {/* Delete Button */}
+              <button
+                onClick={() => {
+                  setSelectedProject(project);
+                  setConfirmOpen(true);
+                }}
+                className="p-2 bg-red-500 hover:bg-red-600 text-white rounded-full shadow-md transition"
+                title="Delete Project"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         />
       )}
 
-      {/* Create/Edit Modal */}
-      <Modal
-        open={modalOpen}
-        title={selectedProject ? "Edit Project" : "Create Project"}
-        description={
-          selectedProject
-            ? "Update the details below."
-            : "Fill in the details below to create a new project."
-        }
-        onClose={() => setModalOpen(false)}
-        onSave={handleSave}
-        saveLabel={selectedProject ? "Update" : "Create"}
-      >
-        <div className="space-y-2">
-          <Input
-            name="name"
-            placeholder="Project Name"
-            value={formData.name}
-            onChange={handleChange}
-          />
-          <Input
-            name="description"
-            placeholder="Description"
-            value={formData.description}
-            onChange={handleChange}
-          />
-        </div>
-      </Modal>
+      {/* 🧩 Create/Edit Project Modal */}
+      <CreateProjectModal
+        open={createModal.open}
+        onClose={() => setCreateModal({ open: false, project: null })}
+        project={createModal.project}
+        onSave={handleSaveProject} // ✅ ensures fetchProjects is called inside
+      />
 
-      {/* Confirm Delete Modal */}
+      {/* 🗑️ Confirm Delete Modal */}
       <ConfirmModal
         open={confirmOpen}
-        message={`Are you sure you want to delete "${selectedProject?.name}"?`}
+        title="Delete Project"
+        message={`Are you sure you want to delete "${selectedProject?.name}"? This action cannot be undone.`}
         onConfirm={handleDelete}
         onCancel={() => setConfirmOpen(false)}
       />

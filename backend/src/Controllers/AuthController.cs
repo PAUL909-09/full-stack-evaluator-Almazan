@@ -26,33 +26,6 @@ namespace task_manager_api.Controllers
         // =============================================================
         // 🧩 LOGIN
         // =============================================================
-        // [HttpPost("login")]
-        // public async Task<IActionResult> Login([FromBody] LoginDto dto)
-        // {
-        //     var user = await _authService.ValidateUserAsync(dto.Email, dto.Password);
-        //     if (user == null)
-        //         return Unauthorized(new { message = "Invalid credentials or unverified email." });
-
-        //     var secret = _config["Jwt:Secret"];
-        //     var accessToken = JwtTokenHelper.GenerateAccessToken(user, secret);
-        //     var refreshToken = JwtTokenHelper.GenerateRefreshToken();
-
-        //     user.RefreshToken = refreshToken;
-        //     user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(30);
-        //     _context.SaveChanges();
-
-        //     return Ok(new
-        //     {
-        //         accessToken,
-        //         refreshToken,
-        //         user = new
-        //         {
-        //             user.Id,
-        //             user.Email,
-        //             user.Role
-        //         }
-        //     });
-        // }
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {

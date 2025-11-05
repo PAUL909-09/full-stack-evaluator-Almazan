@@ -12,6 +12,10 @@ import AdminRoutes from "@/routes/AdminRoutes";
 import EvaluatorRoutes from "@/routes/EvaluatorRoutes";
 import EmployeeRoutes from "@/routes/EmployeeRoutes";
 
+// 🧩 Import react-toastify
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 export default function App() {
   useAuthCheck();
 
@@ -23,7 +27,13 @@ export default function App() {
         <Route path="/verify-invite" element={<VerifyInvite />} />
 
         {/* Protected routes under MainLayout */}
-        <Route element={<Protected><MainLayout /></Protected>}>
+        <Route
+          element={
+            <Protected>
+              <MainLayout />
+            </Protected>
+          }
+        >
           {AdminRoutes}
           {EvaluatorRoutes}
           {EmployeeRoutes}
@@ -32,6 +42,18 @@ export default function App() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+
+      <ToastContainer
+        position="top-right"
+        autoClose={2000}
+        hideProgressBar={false} // ✅ Ensures the progress bar (countdown) is visible
+        newestOnTop={true}
+        closeOnClick={true}
+        pauseOnHover={true} // ✅ Pauses the countdown on hover for better UX
+        draggable={true}
+        theme="light"
+        progressClassName="custom-progress-bar" // ✅ Custom class for styling the countdown bar
+      />
 
       <Toaster />
     </BrowserRouter>

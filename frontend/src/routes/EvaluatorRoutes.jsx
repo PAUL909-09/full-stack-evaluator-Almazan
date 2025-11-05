@@ -2,9 +2,10 @@
 import { Route } from "react-router-dom";
 import { EvaluatorOnly } from "@/components/RouteGuards";
 import EvaluatorDashboard from "@/pages/Evaluator/EvaluatorDashboard";
-import CreateProject from "@/pages/CreateProject";
-import CreateTask from "@/pages/CreateTask";
+import CreateProject from "@/pages/Evaluator/CreateProject";
+import CreateTask from "@/pages/Evaluator/CreateTask";
 import ProjectList from "@/pages/Evaluator/ProjectList";
+import PendingEvaluations from "@/pages/Evaluator/PendingEvaluations";
 
 export default [
   <Route
@@ -43,4 +44,14 @@ export default [
       </EvaluatorOnly>
     }
   />,
+  <Route
+    key="pending-evaluations"
+    path="/evaluator/pending"
+    element={
+      <EvaluatorOnly>
+        <PendingEvaluations/>
+      </EvaluatorOnly>
+    }
+  />,
+
 ];

@@ -40,7 +40,6 @@ namespace task_manager_api.Controllers
                 .Include(e => e.Task)
                 .ThenInclude(t => t.Project)
                 .GroupBy(e => e.Task!.Project!.Name)
-                .Select(g => new { project = g.Key, avgScore = Math.Round(g.Average(e => e.Score), 2) })
                 .ToListAsync();
 
             var summary = new
@@ -48,9 +47,6 @@ namespace task_manager_api.Controllers
                 TotalUsers = await _db.Users.CountAsync(),
                 TotalProjects = await _db.Projects.CountAsync(),
                 TotalTasks = await _db.Tasks.CountAsync(),
-                AvgEvalScore = await _db.Evaluations.AnyAsync()
-                    ? await _db.Evaluations.AverageAsync(e => e.Score)
-                    : 0
             };
 
             return Ok(new

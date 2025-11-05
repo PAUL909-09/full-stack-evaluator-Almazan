@@ -29,9 +29,7 @@ namespace task_manager_api.Controllers
                 DoneTasks = await _db.Tasks.CountAsync(t => t.Status == TaskStatus.Done),
 
                 Evaluations = await _db.Evaluations.CountAsync(),
-                AverageScore = await _db.Evaluations.AnyAsync()
-                    ? await _db.Evaluations.AverageAsync(e => e.Score)
-                    : 0
+                
             };
 
             return Ok(stats);

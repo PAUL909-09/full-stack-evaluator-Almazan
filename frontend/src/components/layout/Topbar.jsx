@@ -1,10 +1,9 @@
-// eslint-disable-next-line no-unused-vars
+/* eslint-disable no-unused-vars */
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { authService } from "@/api/authService";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.png";
-import { Menu, LogOut, Moon, Sun } from "lucide-react";
+import { Menu, Moon, Sun } from "lucide-react";
 import { useDarkMode } from "@/hooks/useDarkMode";
 
 const iconVariants = {
@@ -41,28 +40,15 @@ export default function Topbar({ onToggleSidebar, sidebarOpen }) {
         </Link>
       </div>
 
-      <div className="flex items-center space-x-3">
-        {/* Dark Mode Toggle */}
-        <Button
-          onClick={toggle}
-          variant="ghost"
-          size="sm"
-          className="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-        >
-          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </Button>
-
-        {/* Logout */}
-        <Button
-          onClick={authService.logout}
-          variant="ghost"
-          size="sm"
-          className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
-        >
-          <LogOut className="h-4 w-4 mr-2" />
-          Logout
-        </Button>
-      </div>
+      {/* Dark Mode Toggle */}
+      <Button
+        onClick={toggle}
+        variant="ghost"
+        size="sm"
+        className="text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+      >
+        {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+      </Button>
     </header>
   );
 }
