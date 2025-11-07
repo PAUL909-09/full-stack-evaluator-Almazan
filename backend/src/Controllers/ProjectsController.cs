@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using task_manager_api.Data;
-using task_manager_api.Models;
-using System.Security.Claims; // Added: For extracting user ID from claims
+using task_manager_api.Services.Projects;
+using System.Security.Claims;
+using System.ComponentModel.DataAnnotations;   // <-- NEW
 
 namespace task_manager_api.Controllers
 {
@@ -12,149 +11,141 @@ namespace task_manager_api.Controllers
     [Authorize]
     public class ProjectsController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
-        public ProjectsController(ApplicationDbContext db) => _db = db;
+        private readonly IProjectService _projectService;
 
-        // GET: api/projects
+        public ProjectsController(IProjectService projectService)
+        {
+            _projectService = projectService;
+        }
+
+        // -----------------------------------------------------------------
+        // Helper properties – safe because [Authorize] guarantees a token
+        // -----------------------------------------------------------------
+        private Guid CurrentUserId =>
+            Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+        private string CurrentUserRole =>
+            User.FindFirst(ClaimTypes.Role)!.Value;
+
+        private bool IsAdmin => CurrentUserRole == "Admin";
+        private bool IsEvaluator => CurrentUserRole == "Evaluator";
+
+        // -----------------------------------------------------------------
+        // GET /api/projects   (Admin → all, Evaluator → own)
+        // -----------------------------------------------------------------
         [HttpGet]
         [Authorize(Roles = "Admin,Evaluator")]
         public async Task<IActionResult> GetAll()
         {
-            var projects = await _db.Projects
-                .Include(p => p.Evaluator)
-                .Include(p => p.Tasks)
-                .ThenInclude(t => t.AssignedTo)
-                .ToListAsync();
+            var projects = IsAdmin
+                ? await _projectService.GetAllProjectsAsync()
+                : await _projectService.GetProjectsByEvaluatorAsync(CurrentUserId);
 
             return Ok(projects);
         }
 
-        // GET: api/projects/{id}
+        // -----------------------------------------------------------------
+        // GET /api/projects/{id}
+        // -----------------------------------------------------------------
         [HttpGet("{id}")]
-        [Authorize(Roles = "Admin,Evaluator")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var project = await _db.Projects
-                .Include(p => p.Evaluator)
-                .Include(p => p.Tasks)
-                .ThenInclude(t => t.AssignedTo)
-                .FirstOrDefaultAsync(p => p.Id == id);
+            var project = await _projectService.GetProjectByIdAsync(id);
+            if (project == null)
+                return NotFound("Project not found.");
 
-            if (project == null) return NotFound("Project not found.");
+            // ---- access control ------------------------------------------------
+            if (!IsAdmin &&
+                project.EvaluatorId != CurrentUserId &&
+                !project.Tasks.Any(t => t.AssignedToId == CurrentUserId))
+            {
+                return Forbid("You do not have access to this project.");
+            }
+
             return Ok(project);
         }
 
-        // POST: api/projects
+        // -----------------------------------------------------------------
+        // POST /api/projects
+        // -----------------------------------------------------------------
         [HttpPost]
         [Authorize(Roles = "Evaluator")]
         public async Task<IActionResult> Create([FromBody] CreateProjectDto dto)
         {
-            var evaluator = await _db.Users.FindAsync(dto.EvaluatorId);
-            if (evaluator == null || evaluator.Role != Role.Evaluator)
-                return BadRequest("Invalid evaluator.");
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            var project = new Project
-            {
-                Name = dto.Name,
-                Description = dto.Description,
-                EvaluatorId = dto.EvaluatorId
-            };
+            // Service expects a non-null description → provide empty string if missing
+            var description = dto.Description ?? string.Empty;
 
-            _db.Projects.Add(project);
-            await _db.SaveChangesAsync();
-
+            var project = await _projectService.CreateProjectAsync(dto.Name, description, CurrentUserId);
             return CreatedAtAction(nameof(GetById), new { id = project.Id }, project);
         }
 
-        // PUT: api/projects/{id}  // Added: Update endpoint
+        // -----------------------------------------------------------------
+        // PUT /api/projects/{id}
+        // -----------------------------------------------------------------
         [HttpPut("{id}")]
         [Authorize(Roles = "Evaluator")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProjectDto dto)
         {
-            try
-            {
-                // Extract current user ID from JWT token
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var currentUserId))
-                    return Unauthorized("Invalid user token.");
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-                // Find the project
-                var project = await _db.Projects.FindAsync(id);
-                if (project == null) return NotFound("Project not found.");
+            var project = await _projectService.UpdateProjectAsync(
+                id,
+                dto.Name,
+                dto.Description,   // can be null → service already handles ?? fallback
+                CurrentUserId);
 
-                // Check if the current user is the project's evaluator
-                if (project.EvaluatorId != currentUserId)
-                    return Forbid("You can only update projects you created.");
+            if (project == null)
+                return NotFound("Project not found or you are not the owner.");
 
-                // Update fields
-                project.Name = dto.Name ?? project.Name;
-                project.Description = dto.Description ?? project.Description;
-
-                await _db.SaveChangesAsync();
-
-                return Ok(project); // Return updated project
-            }
-            catch (Exception ex)
-            {
-                // Log the error
-                Console.WriteLine($"Error updating project {id}: {ex.Message}");
-                return StatusCode(500, "An error occurred while updating the project.");
-            }
+            return Ok(project);
         }
 
-        // DELETE: api/projects/{id}
+        // -----------------------------------------------------------------
+        // DELETE /api/projects/{id}
+        // -----------------------------------------------------------------
         [HttpDelete("{id}")]
         [Authorize(Roles = "Evaluator")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            try
-            {
-                // Extract current user ID from JWT token
-                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var currentUserId))
-                    return Unauthorized("Invalid user token.");
-
-                // Find the project
-                var project = await _db.Projects.FindAsync(id);
-                if (project == null) return NotFound("Project not found.");
-
-                // Check if the current user is the project's evaluator
-                if (project.EvaluatorId != currentUserId)
-                    return Forbid("You can only delete projects you created.");
-
-                // Delete the project
-                _db.Projects.Remove(project);
-                await _db.SaveChangesAsync();
-
-                return NoContent(); // Success
-            }
-            catch (Exception ex)
-            {
-                // Log the error (use your logging framework, e.g., Serilog)
-                Console.WriteLine($"Error deleting project {id}: {ex.Message}");
-                return StatusCode(500, "An error occurred while deleting the project.");
-            }
+            var success = await _projectService.DeleteProjectAsync(id, CurrentUserId);
+            return success ? NoContent() : NotFound("Project not found or you are not the owner.");
         }
 
-        // ✅ Moved this endpoint inside the controller class
-        [HttpGet("user/{userId}")]
-        [Authorize(Roles = "Admin,Evaluator,Employee")]
-        public async Task<IActionResult> GetUserProjects(Guid userId)
+        // -----------------------------------------------------------------
+        // GET /api/projects/my   (any logged-in user)
+        // -----------------------------------------------------------------
+        [HttpGet("my")]
+        [Authorize(Roles = "Evaluator,Employee")]
+        public async Task<IActionResult> GetMyProjects()
         {
-            var projects = await _db.Projects
-                .Include(p => p.Evaluator)
-                .Include(p => p.Tasks)
-                .ThenInclude(t => t.AssignedTo)
-                .Where(p => p.EvaluatorId == userId || p.Tasks.Any(t => t.AssignedToId == userId))
-                .ToListAsync();
-
+            var projects = await _projectService.GetUserProjectsAsync(CurrentUserId);
             return Ok(projects);
         }
 
-        // Added: Record for update DTO
-        public record UpdateProjectDto(string? Name, string? Description);
+        // -----------------------------------------------------------------
+        // GET /api/projects/user/{userId}   (Admin only)
+        // -----------------------------------------------------------------
+        [HttpGet("user/{userId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetUserProjects(Guid userId)
+        {
+            var projects = await _projectService.GetUserProjectsAsync(userId);
+            return Ok(projects);
+        }
 
-        // record should remain last
-        public record CreateProjectDto(string Name, string Description, Guid EvaluatorId);
+        // -----------------------------------------------------------------
+        // DTOs – validation attributes
+        // -----------------------------------------------------------------
+        public record CreateProjectDto(
+            [Required] string Name,
+            string? Description = null);
+
+        public record UpdateProjectDto(
+            string? Name = null,
+            string? Description = null);
     }
 }

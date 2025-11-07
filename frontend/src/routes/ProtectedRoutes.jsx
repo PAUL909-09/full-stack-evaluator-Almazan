@@ -16,6 +16,10 @@ import AdminVerifyUsers from "@/pages/Admin/AdminVerifyUsers";
 import EvaluatorDashboard from "@/pages/Evaluator/EvaluatorDashboard";
 import CreateProject from "@/pages/Evaluator/CreateProject";
 import CreateTask from "@/pages/Evaluator/CreateTask";
+import ProjectList from "@/pages/Evaluator/ProjectList"; 
+import ProjectTasks from "@/pages/Evaluator/ProjectTasks"; 
+import AssignEmployeesToProject from "@/pages/Evaluator/AssignEmployeesToProject"; 
+import PendingEvaluations from "@/pages/Evaluator/PendingEvaluations";
 
 // Employee pages
 import EmployeeDashboard from "@/pages/Employee/EmployeeDashboard";
@@ -26,68 +30,55 @@ import TaskDetails from "@/pages/TaskDetails";
 export default function ProtectedRoutes() {
   return (
     <Routes>
-      <Route
-        element={
-          <Protected>
-            <MainLayout />
-          </Protected>
-        }
-      >
-        {/* Admin Routes */}
+      <Route element={<Protected><MainLayout /></Protected>}>
+        
+        {/* === ADMIN ROUTES === */}
         <Route
           path="/admin/dashboard"
-          element={
-            <AdminOnly>
-              <AdminDashboard />
-            </AdminOnly>
-          }
+          element={<AdminOnly><AdminDashboard /></AdminOnly>}
         />
         <Route
           path="/admin/verify-users"
-          element={
-            <AdminOnly>
-              <AdminVerifyUsers />
-            </AdminOnly>
-          }
+          element={<AdminOnly><AdminVerifyUsers /></AdminOnly>}
         />
 
-        {/* Evaluator Routes */}
+        {/* === EVALUATOR ROUTES === */}
         <Route
           path="/evaluator/dashboard"
-          element={
-            <EvaluatorOnly>
-              <EvaluatorDashboard />
-            </EvaluatorOnly>
-          }
+          element={<EvaluatorOnly><EvaluatorDashboard /></EvaluatorOnly>}
         />
         <Route
           path="/projects/create"
-          element={
-            <EvaluatorOnly>
-              <CreateProject />
-            </EvaluatorOnly>
-          }
+          element={<EvaluatorOnly><CreateProject /></EvaluatorOnly>}
         />
         <Route
           path="/tasks/create"
-          element={
-            <EvaluatorOnly>
-              <CreateTask />
-            </EvaluatorOnly>
-          }
+          element={<EvaluatorOnly><CreateTask /></EvaluatorOnly>}
+        />
+        <Route
+          path="/evaluator/projects"
+          element={<EvaluatorOnly><ProjectList /></EvaluatorOnly>}
+        />
+        <Route
+          path="/evaluator/pending"
+          element={<EvaluatorOnly><PendingEvaluations /></EvaluatorOnly>}
+        />
+        <Route
+          path="/evaluator/project-tasks/:projectId"
+          element={<EvaluatorOnly><ProjectTasks /></EvaluatorOnly>}
+        />
+        <Route
+          path="/evaluator/assign-employees/:projectId"
+          element={<EvaluatorOnly><AssignEmployeesToProject /></EvaluatorOnly>}
         />
 
-        {/* Employee Routes */}
+        {/* === EMPLOYEE ROUTES === */}
         <Route
           path="/employee/dashboard"
-          element={
-            <EmployeeOnly>
-              <EmployeeDashboard />
-            </EmployeeOnly>
-          }
+          element={<EmployeeOnly><EmployeeDashboard /></EmployeeOnly>}
         />
 
-        {/* Shared Routes */}
+        {/* === SHARED ROUTES === */}
         <Route path="/tasks/:id" element={<TaskDetails />} />
       </Route>
     </Routes>

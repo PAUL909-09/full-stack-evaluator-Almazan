@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "react-toastify";  // ✅ Added for consistency
 import { useAuth } from "@/hooks/useAuth";
 import { X } from "lucide-react";
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function CreateProjectModal({ open, onClose, onSuccess, project }) {

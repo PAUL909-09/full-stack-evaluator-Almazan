@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Text.Json.Serialization; // ← ADD THIS
+using task_manager_api.Services.Projects;  // ✅ Updated to match the nested namespace
+
 
 DotNetEnv.Env.Load();
 
@@ -51,6 +53,9 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
+
+     // Use full type name for schema IDs to avoid conflicts
+    c.CustomSchemaIds(type => type.FullName);
 });
 
 // ===== DB =====
@@ -61,6 +66,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddHostedService<ExpiredInviteCleanupService>();
+builder.Services.AddScoped<IProjectService, ProjectService>();
 
 // ===== JWT Auth =====
 var jwtSecret = builder.Configuration["Jwt:Secret"]
