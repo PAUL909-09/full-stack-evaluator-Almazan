@@ -21,7 +21,7 @@ export async function getMyProjects() {
  * Admin-only – list **every** project in the system.
  */
 export async function getAllProjects() {
-  const { data } = await api.get("/api/projects");
+  const { data } = await api.get("/projects");
   return data;
 }
 
@@ -30,7 +30,7 @@ export async function getAllProjects() {
  * @param {string} projectId – GUID
  */
 export async function getProjectById(projectId) {
-  const { data } = await api.get(`/api/projects/${projectId}`);
+  const { data } = await api.get(`/projects/${projectId}`);
   return data;
 }
 
@@ -39,7 +39,7 @@ export async function getProjectById(projectId) {
  * @param {{ name: string, description?: string }} payload
  */
 export async function createProject(payload) {
-  const { data } = await api.post("/api/projects", payload);
+  const { data } = await api.post("/projects", payload);
   return data; // created Project
 }
 
@@ -49,7 +49,7 @@ export async function createProject(payload) {
  * @param {{ name?: string, description?: string }} payload
  */
 export async function updateProject(projectId, payload) {
-  const { data } = await api.put(`/api/projects/${projectId}`, payload);
+  const { data } = await api.put(`/projects/${projectId}`, payload);
   return data;
 }
 
@@ -83,7 +83,7 @@ export async function getUserProjects(userId) {
  */
 export async function getAllEmployees() {
   // Adjust the endpoint to whatever you expose for employees
-  const { data } = await api.get("/api/users?role=Employee");
+  const { data } = await api.get("/users?role=Employee");
   return data;
 }
 
@@ -94,7 +94,7 @@ export async function getAllEmployees() {
  */
 export async function getAssignedEmployees(projectId) {
   try {
-    const { data } = await api.get(`/api/projects/${projectId}/assignments`);
+    const { data } = await api.get(`/projects/${projectId}/assignments`);
     return data.map((a) => a.employeeId);
   } catch (err) {
     // fallback – derive from tasks inside the project
@@ -130,7 +130,7 @@ export async function getEmployeesByProject(projectId) {
  * @param {string[]} employeeIds
  */
 export async function assignEmployeesToProject(projectId, employeeIds) {
-  await api.post(`/api/projects/${projectId}/assign`, { employeeIds });
+  await api.post(`/projects/${projectId}/assign`, { employeeIds });
 }
 
 /* -------------------------------------------------------------------------- */

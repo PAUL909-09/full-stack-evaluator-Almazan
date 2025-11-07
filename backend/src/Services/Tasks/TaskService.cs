@@ -1,0 +1,170 @@
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using task_manager_api.Data;
+using task_manager_api.Dtos;
+using task_manager_api.Models;
+
+namespace task_manager_api.Services.Tasks
+{
+    // Resolve ambiguity once at the top of the file
+    using TaskStatus = Models.TaskStatus;
+
+    public class TaskService : ITaskService
+    {
+        private readonly ApplicationDbContext _db;
+
+        public TaskService(ApplicationDbContext db) => _db = db;
+
+        public async Task<IEnumerable<TaskItem>> GetAllAsync()
+            => await _db.Tasks
+                .Include(t => t.Project)
+                .Include(t => t.AssignedTo)
+                .Include(t => t.Comments)
+                .Include(t => t.Evaluation)
+                .ToListAsync();
+
+        public async Task<TaskItem?> GetByIdAsync(Guid id)
+            => await _db.Tasks
+                .Include(t => t.Project)
+                .Include(t => t.AssignedTo)
+                .Include(t => t.Comments)
+                .Include(t => t.Evaluation)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+        public async Task<IEnumerable<TaskItem>> GetByProjectAsync(Guid projectId)
+            => await _db.Tasks
+                .Where(t => t.ProjectId == projectId)
+                .Include(t => t.AssignedTo)
+                .Include(t => t.Project)
+                .ToListAsync();
+
+        public async Task<IEnumerable<User>> GetEmployeesByProjectAsync(Guid projectId, Guid evaluatorId)
+        {
+            var project = await _db.Projects.FindAsync(projectId);
+            if (project == null || project.EvaluatorId != evaluatorId)
+                return Enumerable.Empty<User>();
+
+            return await _db.Tasks
+                .Where(t => t.ProjectId == projectId && t.AssignedTo != null)
+                .Select(t => t.AssignedTo!)
+                .Distinct()
+                .ToListAsync();
+        }
+
+        public async Task<TaskItem> CreateAsync(CreateTaskDto dto, Guid evaluatorId)
+        {
+            var evaluator = await _db.Users.FindAsync(dto.CreatedById);
+            var employee   = await _db.Users.FindAsync(dto.AssignedToId);
+            var project    = await _db.Projects.FindAsync(dto.ProjectId);
+
+            if (evaluator == null || employee == null || project == null)
+                throw new ArgumentException("Invalid references.");
+            if (employee.Role != Role.Employee)
+                throw new ArgumentException("Assigned user must be an employee.");
+            if (project.EvaluatorId != evaluatorId)
+                throw new UnauthorizedAccessException("You can only create tasks for your own projects.");
+
+            var task = new TaskItem
+            {
+                Title         = dto.Title,
+                Description   = dto.Description,
+                CreatedById   = evaluator.Id,
+                AssignedToId  = employee.Id,
+                ProjectId     = project.Id,
+                Status        = TaskStatus.Todo
+            };
+
+            _db.Tasks.Add(task);
+            await _db.SaveChangesAsync();
+
+            await LogHistoryAsync(task.Id, "Created", null, evaluatorId);
+            return task;
+        }
+
+        public async Task<TaskItem?> UpdateStatusAsync(Guid id, TaskStatus newStatus, Guid userId, string role)
+        {
+            var task = await _db.Tasks
+                .Include(t => t.AssignedTo)
+                .Include(t => t.Project)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (task == null) return null;
+
+            bool canUpdate = role switch
+            {
+                "Employee"  => task.AssignedToId == userId,
+                "Evaluator" => task.Project.EvaluatorId == userId,
+                _           => false
+            };
+
+            if (!canUpdate)
+                throw new UnauthorizedAccessException("Not authorized to update this task.");
+
+            if (!IsValidStatusTransition(task.Status, newStatus, role))
+                throw new InvalidOperationException($"Cannot change status from {task.Status} to {newStatus} as {role}.");
+
+            var oldStatus = task.Status;
+            task.Status = newStatus;
+            await _db.SaveChangesAsync();
+
+            await LogHistoryAsync(task.Id, $"{oldStatus} → {newStatus}", null, userId);
+            return task;
+        }
+
+        public async Task<bool> DeleteAsync(Guid id, Guid evaluatorId)
+        {
+            var task = await _db.Tasks
+                .Include(t => t.Project)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (task == null) return false;
+
+            bool isAdmin = await _db.Users
+                .Where(u => u.Id == evaluatorId && u.Role == Role.Admin)
+                .AnyAsync();
+
+            if (task.Project.EvaluatorId != evaluatorId && !isAdmin)
+                return false;
+
+            _db.Tasks.Remove(task);
+            await _db.SaveChangesAsync();
+
+            await LogHistoryAsync(task.Id, "Deleted", null, evaluatorId);
+            return true;
+        }
+
+        // ────── Helpers ──────
+        private async Task LogHistoryAsync(Guid taskId, string action, string? comments, Guid performedById)
+        {
+            var history = new TaskHistory
+            {
+                TaskId       = taskId,
+                Action       = action,
+                Comments     = comments,
+                PerformedById = performedById
+            };
+            _db.TaskHistories.Add(history);
+            await _db.SaveChangesAsync();
+        }
+
+        private static bool IsValidStatusTransition(TaskStatus from, TaskStatus to, string role)
+        {
+            return (from, to, role) switch
+            {
+                // Employee flow
+                (_, TaskStatus.InProgress, "Employee") => from == TaskStatus.Todo,
+                (_, TaskStatus.Done,       "Employee") => from == TaskStatus.InProgress,
+                (_, TaskStatus.Submitted,  "Employee") => from == TaskStatus.Done,
+
+                // Evaluator review
+                (_, TaskStatus.Approved,       "Evaluator") => true,
+                (_, TaskStatus.NeedsRevision,  "Evaluator") => true,
+                (_, TaskStatus.Rejected,       "Evaluator") => true,
+
+                _ => false
+            };
+        }
+    }
+}

@@ -1,160 +1,221 @@
-// frontend/src/pages/Evaluator/ProjectTasks.jsx
-import React, { useState, useEffect } from "react";
-import api from "@/api/axios";
-import { tasksService } from "@/api/tasksService";
+// src/pages/Evaluator/ProjectTasks.jsx
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { tasksService } from "@/services/tasksService";
+import { authService } from "@/api/authService";
+import { useToast } from "@/hooks/use-toast";
+
+// shadcn/ui components (JSX versions)
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import Badge from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";  // Assumes you have a Table component
-import { toast } from "react-toastify";
-import { Loader2, Edit, Trash2 } from "lucide-react";
+
+const statusColors = {
+  Todo: "todo",
+  InProgress: "inprogress",
+  Done: "done",
+  Submitted: "submitted",
+  Approved: "approved",
+  NeedsRevision: "revision",
+  Rejected: "destructive",
+};
 
 export default function ProjectTasks() {
-  const [projects, setProjects] = useState([]);
-  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const { projectId } = useParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const user = authService.getCurrentUser();
+
   const [tasks, setTasks] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  // Load all tasks for this project
   useEffect(() => {
-    // Fetch projects on mount
-    const fetchProjects = async () => {
+    (async () => {
       try {
-        const res = await api.get("/projects");
-        setProjects(res.data);
-      } catch (err) {
-        toast.error("Failed to load projects.");
-      }
-    };
-    fetchProjects();
-  }, []);
-
-  useEffect(() => {
-    // Fetch tasks when project is selected
-    if (selectedProjectId) {
-      const fetchTasks = async () => {
-        setLoading(true);
-        try {
-          const data = await tasksService.getTasksByProject(selectedProjectId);
-          setTasks(data);
-        } catch (err) {
-          toast.error("Failed to load tasks for this project.");
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchTasks();
-    } else {
-      setTasks([]);
-    }
-  }, [selectedProjectId]);
-
-  const handleStatusUpdate = async (taskId, newStatus) => {
-    try {
-      await tasksService.updateTaskStatus(taskId, newStatus);
-      toast.success("Task status updated.");
-      // Refresh tasks
-      const data = await tasksService.getTasksByProject(selectedProjectId);
-      setTasks(data);
-    } catch (err) {
-      toast.error("Failed to update status.");
-    }
-  };
-
-  const handleDelete = async (taskId) => {
-    if (window.confirm("Delete this task?")) {
-      try {
-        await api.delete(`/tasks/${taskId}`);
-        toast.success("Task deleted.");
-        // Refresh tasks
-        const data = await tasksService.getTasksByProject(selectedProjectId);
+        const data = await tasksService.getTasksByProject(projectId);
         setTasks(data);
       } catch (err) {
-        toast.error("Failed to delete task.");
+        toast({
+          title: "Error",
+          description: "Failed to load tasks",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
+    })();
+  }, [projectId, toast]);
+
+  const updateStatus = async (taskId, newStatus) => {
+    try {
+      const updated = await tasksService.updateTaskStatus(taskId, newStatus);
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
+      toast({ title: "Success", description: `Status → ${newStatus}` });
+    } catch (err) {
+      toast({
+        title: "Failed",
+        description: err.response?.data?.message || "Update failed",
+        variant: "destructive",
+      });
     }
   };
 
+  if (loading) {
+    return (
+      <div className="p-8 text-center">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-8 bg-gradient-to-br from-[#F8FBFF] to-[#E9F4FF] min-h-screen">
-      <h1 className="text-3xl font-bold mb-6">Tasks by Project</h1>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Project Tasks</h1>
+        <Button onClick={() => navigate(-1)} variant="outline">
+          ← Back
+        </Button>
+      </div>
 
-      {/* Project Selector */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Select Project</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Choose a project" />
-            </SelectTrigger>
-            <SelectContent>
-              {projects.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
-      {/* Tasks Table */}
-      {loading ? (
-        <div className="flex justify-center">
-          <Loader2 className="animate-spin" />
-        </div>
-      ) : (
+      {/* Empty State */}
+      {tasks.length === 0 ? (
         <Card>
-          <CardHeader>
-            <CardTitle>Assigned Tasks</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {tasks.length === 0 ? (
-              <p>No tasks for this project.</p>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Assigned To</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tasks.map((task) => (
-                    <TableRow key={task.id}>
-                      <TableCell>{task.title}</TableCell>
-                      <TableCell>{task.description || "N/A"}</TableCell>
-                      <TableCell>{task.status}</TableCell>
-                      <TableCell>
-                        {task.assignedTo ? `${task.assignedTo.firstname} ${task.assignedTo.lastname} (${task.assignedTo.email})` : "Unassigned"}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          onClick={() => handleStatusUpdate(task.id, "InProgress")}  // Example: Toggle to InProgress
-                          className="mr-2"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleDelete(task.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+          <CardContent className="text-center py-10 text-gray-500">
+            No tasks in this project yet.{" "}
+            <Button
+              onClick={() =>
+                navigate(`/evaluator/assign-employees/${projectId}`)
+              }
+              variant="link"
+              className="underline"
+            >
+              Assign employees
+            </Button>
           </CardContent>
         </Card>
+      ) : (
+        /* Task Table */
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Assigned To</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tasks.map((task) => (
+                <TableRow key={task.id}>
+                  <TableCell className="font-medium">{task.title}</TableCell>
+
+                  <TableCell>
+                    <Badge variant={statusColors[task.status]}>
+                      {task.status}
+                    </Badge>
+                  </TableCell>
+
+                  <TableCell>{task.assignedTo?.name || "—"}</TableCell>
+
+                  <TableCell className="text-right space-x-1">
+                    {/* Employee Flow */}
+                    {user.role === "Employee" &&
+                      task.assignedToId === user.id && (
+                        <>
+                          {task.status === "Todo" && (
+                            <Button
+                              size="sm"
+                              onClick={() =>
+                                updateStatus(task.id, "InProgress")
+                              }
+                            >
+                              Start
+                            </Button>
+                          )}
+                          {task.status === "InProgress" && (
+                            <Button
+                              size="sm"
+                              onClick={() => updateStatus(task.id, "Done")}
+                            >
+                              Finish
+                            </Button>
+                          )}
+                          {task.status === "Done" && (
+                            <Button
+                              size="sm"
+                              onClick={() => updateStatus(task.id, "Submitted")}
+                            >
+                              Submit
+                            </Button>
+                          )}
+                        </>
+                      )}
+
+                    {/* Evaluator Review */}
+                    {user.role === "Evaluator" &&
+                      task.status === "Submitted" && (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => updateStatus(task.id, "Approved")}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              updateStatus(task.id, "NeedsRevision")
+                            }
+                          >
+                            Revise
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => updateStatus(task.id, "Rejected")}
+                          >
+                            Reject
+                          </Button>
+                        </>
+                      )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+
+          {/* History Panel (collapsible per task) */}
+          {tasks.map((task) => (
+            <details
+              key={`history-${task.id}`}
+              className="border-t bg-gray-50 px-4 py-3 text-sm"
+            >
+              <summary className="cursor-pointer font-medium text-gray-700">
+                History ({task.history?.length || 0} entries)
+              </summary>
+              <ul className="mt-2 space-y-1 text-xs text-gray-600">
+                {task.history?.map((h, i) => (
+                  <li key={i}>
+                    <strong>{h.action}</strong> by {h.performedBy?.name} @{" "}
+                    {new Date(h.performedAt).toLocaleString()}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ))}
+        </div>
       )}
     </div>
   );

@@ -1,7 +1,8 @@
-// frontend/src/pages/evaluator/ProjectList.jsx
+// frontend/src/pages/Evaluator/ProjectList.jsx
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom"; // ← ADD THIS
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Folder } from "lucide-react";
+import { Plus, Edit, Trash2, Folder, Eye } from "lucide-react"; // ← ADD Eye
 import { toast } from "react-toastify";
 import ConfirmModal from "@/components/ConfirmModal";
 import DataTable from "@/components/table/DataTable";
@@ -21,13 +22,10 @@ const ProjectList = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [createModal, setCreateModal] = useState({ open: false, project: null });
 
-  /* ------------------------------------------------------------------ */
-  /*  FETCH ONLY THE CURRENT EVALUATOR'S PROJECTS                        */
-  /* ------------------------------------------------------------------ */
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const data = await getMyProjects();      // <-- NEW SERVICE CALL
+      const data = await getMyProjects();
       setProjects(data ?? []);
     } catch (error) {
       console.error("Error fetching projects:", error);
@@ -41,16 +39,13 @@ const ProjectList = () => {
     fetchProjects();
   }, []);
 
-  /* ------------------------------------------------------------------ */
-  /*  DELETE                                                             */
-  /* ------------------------------------------------------------------ */
   const handleDelete = async () => {
     if (!selectedProject?.id) return;
 
     try {
       await deleteProject(selectedProject.id);
       setConfirmOpen(false);
-      await fetchProjects();                     // refresh list
+      await fetchProjects();
       toast.success("Project deleted successfully.");
     } catch (error) {
       console.error("Error deleting project:", error);
@@ -58,20 +53,16 @@ const ProjectList = () => {
     }
   };
 
-  /* ------------------------------------------------------------------ */
-  /*  CREATE / UPDATE                                                    */
-  /* ------------------------------------------------------------------ */
   const handleSaveProject = async (formData, isEdit) => {
     try {
       if (isEdit && createModal.project?.id) {
-
         await updateProject(createModal.project.id, formData);
       } else {
         await createProject(formData);
       }
 
       setCreateModal({ open: false, project: null });
-      await fetchProjects();                     // refresh list
+      await fetchProjects();
       toast.success(`Project ${isEdit ? "updated" : "created"} successfully.`);
     } catch (error) {
       console.error("Error saving project:", error);
@@ -79,9 +70,7 @@ const ProjectList = () => {
     }
   };
 
-  /* ------------------------------------------------------------------ */
-  /*  TABLE COLUMNS                                                      */
-  /* ------------------------------------------------------------------ */
+  // ── TABLE COLUMNS ─────────────────────────────────────
   const columns = [
     { key: "name",        label: "Project Name" },
     { key: "description", label: "Description" },
@@ -118,7 +107,16 @@ const ProjectList = () => {
           columns={columns}
           data={projects}
           actions={(project) => (
-            <div className="flex justify-center space-x-3">
+            <div className="flex justify-center items-center space-x-2">
+              {/* View Tasks */}
+              <Link
+                to={`/evaluator/project-tasks/${project.id}`}
+                className="p-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full shadow-md transition"
+                title="View Tasks"
+              >
+                <Eye className="h-4 w-4" />
+              </Link>
+
               {/* Edit */}
               <button
                 onClick={() => setCreateModal({ open: true, project })}

@@ -2,34 +2,58 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using task_manager_api.Data;
-using task_manager_api.Models;
-using System.Security.Claims; 
 using task_manager_api.Dtos;
-
-// ✅ Fix ambiguity between System.Threading.Tasks.TaskStatus and our enum
-using TaskStatus = task_manager_api.Models.TaskStatus;
+using task_manager_api.Models;
+using task_manager_api.Services.Tasks;               // <-- NEW
+using System.Security.Claims;
 
 namespace task_manager_api.Controllers
 {
+    // Resolve TaskStatus ambiguity once for the whole file
+    using TaskStatus = Models.TaskStatus;
+
     [ApiController]
     [Route("api/tasks")]
     [Authorize]
     public class TasksController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
-        public TasksController(ApplicationDbContext db) => _db = db;
+        private readonly ITaskService _taskService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
+
+        public TasksController(
+            ApplicationDbContext db,
+            ITaskService taskService,
+            IHttpContextAccessor httpContextAccessor)
+        {
+            _db = db;
+            _taskService = taskService;
+            _httpContextAccessor = httpContextAccessor;
+        }
+
+        // --------------------------------------------------------------------
+        // Helper – extract current user id + role from JWT
+        // --------------------------------------------------------------------
+        private (Guid userId, string role) GetCurrentUser()
+        {
+            var user = _httpContextAccessor.HttpContext!.User;
+
+            var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? throw new UnauthorizedAccessException("User ID claim is missing.");
+
+            var roleClaim = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
+
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                throw new UnauthorizedAccessException("Invalid user ID in token.");
+
+            return (userId, roleClaim);
+        }
 
         // GET: api/tasks
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var tasks = await _db.Tasks
-                .Include(t => t.Project)
-                .Include(t => t.AssignedTo)
-                .Include(t => t.Comments)
-                .Include(t => t.Evaluation)
-                .ToListAsync();
-
+            var tasks = await _taskService.GetAllAsync();
             return Ok(tasks);
         }
 
@@ -37,115 +61,132 @@ namespace task_manager_api.Controllers
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
-            var task = await _db.Tasks
-                .Include(t => t.Project)
-                .Include(t => t.AssignedTo)
-                .Include(t => t.Comments)
-                .Include(t => t.Evaluation)
-                .FirstOrDefaultAsync(t => t.Id == id);
-
-            return task == null ? NotFound("Task not found.") : Ok(task);
+            var task = await _taskService.GetByIdAsync(id);
+            return task == null
+                ? NotFound("Task not found.")
+                : Ok(task);
         }
 
-        // ✅ NEW: GET: api/tasks/project/{projectId} - Fetch tasks for a specific project
+        // GET: api/tasks/project/{projectId}
         [HttpGet("project/{projectId}")]
         public async Task<IActionResult> GetByProject(Guid projectId)
         {
-            var tasks = await _db.Tasks
-                .Where(t => t.ProjectId == projectId)
-                .Include(t => t.AssignedTo)  // Include assigned employee details
-                .Include(t => t.Project)     // Include project details
-                .ToListAsync();
-
+            var tasks = await _taskService.GetByProjectAsync(projectId);
             return Ok(tasks);
         }
 
-        // ✅ NEW: GET: api/tasks/project/{projectId}/employees - Fetch unique employees assigned to tasks in a project
+        // GET: api/tasks/project/{projectId}/employees
         [HttpGet("project/{projectId}/employees")]
         [Authorize(Roles = "Evaluator")]
         public async Task<IActionResult> GetEmployeesByProject(Guid projectId)
         {
-            // Check if the evaluator owns the project (for security)
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var currentUserId))
-                return Unauthorized("Invalid user token.");
+            var (userId, _) = GetCurrentUser();
 
-            var project = await _db.Projects.FindAsync(projectId);
-            if (project == null) return NotFound("Project not found.");
-            if (project.EvaluatorId != currentUserId) return Forbid("You can only access employees for your own projects.");
-
-            var employees = await _db.Tasks
-                .Where(t => t.ProjectId == projectId && t.AssignedTo != null)
-                .Select(t => t.AssignedTo)
-                .Distinct()
-                .ToListAsync();
-
+            var employees = await _taskService.GetEmployeesByProjectAsync(projectId, userId);
             return Ok(employees);
         }
 
-        // POST: api/tasks (Updated with ownership check)
+        // POST: api/tasks
         [HttpPost]
         [Authorize(Roles = "Evaluator")]
         public async Task<IActionResult> Create([FromBody] CreateTaskDto dto)
         {
-            // Extract current user ID from JWT token
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var currentUserId))
-                return Unauthorized("Invalid user token.");
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
-            var evaluator = await _db.Users.FindAsync(dto.CreatedById);
-            var employee = await _db.Users.FindAsync(dto.AssignedToId);
-            var project = await _db.Projects.FindAsync(dto.ProjectId);
+            var (userId, _) = GetCurrentUser();
 
-            if (evaluator == null || employee == null || project == null)
-                return BadRequest("Invalid references.");
-            if (employee.Role != Role.Employee)
-                return BadRequest("Assigned user must be an employee.");
-            // ✅ NEW: Ensure evaluator owns the project
-            if (project.EvaluatorId != currentUserId)
-                return Forbid("You can only create tasks for your own projects.");
-
-            var task = new TaskItem
+            try
             {
-                Title = dto.Title,
-                Description = dto.Description,
-                CreatedById = evaluator.Id,
-                AssignedToId = employee.Id,
-                ProjectId = project.Id,
-                Status = TaskStatus.Todo
-            };
-
-            _db.Tasks.Add(task);
-            await _db.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetById), new { id = task.Id }, task);
+                var task = await _taskService.CreateAsync(dto, userId);
+                return CreatedAtAction(nameof(GetById), new { id = task.Id }, task);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid("You can only create tasks for projects you own.");
+            }
+            catch (Exception)                     // <-- removed unused 'ex'
+            {
+                return StatusCode(500, "An error occurred while creating the task.");
+            }
         }
 
         // PUT: api/tasks/{id}/status
         [HttpPut("{id}/status")]
         [Authorize(Roles = "Employee,Evaluator")]
-        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] TaskStatusDto dto)  // ✅ Now uses shared DTO
+        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] TaskStatusDto dto)
         {
-            var task = await _db.Tasks.FindAsync(id);
-            if (task == null) return NotFound("Task not found.");
-            task.Status = dto.Status;
-            await _db.SaveChangesAsync();
-            return Ok(task);
-        }
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
 
+            var (userId, role) = GetCurrentUser();
+
+            try
+            {
+                var task = await _taskService.UpdateStatusAsync(id, dto.Status, userId, role);
+                return task == null
+                    ? NotFound("Task not found.")
+                    : Ok(task);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid("You are not authorized to update this task's status.");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception)                     // <-- removed unused 'ex'
+            {
+                return StatusCode(500, "Failed to update task status.");
+            }
+        }
 
         // DELETE: api/tasks/{id}
         [HttpDelete("{id}")]
         [Authorize(Roles = "Evaluator,Admin")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var task = await _db.Tasks.FindAsync(id);
-            if (task == null) return NotFound("Task not found.");
-            _db.Tasks.Remove(task);
-            await _db.SaveChangesAsync();
-            return NoContent();
+            var (userId, _) = GetCurrentUser();
+
+            var success = await _taskService.DeleteAsync(id, userId);
+
+            return success
+                ? NoContent()
+                : NotFound("Task not found or you don't have permission to delete it.");
         }
 
-        public record CreateTaskDto(string Title, string Description, Guid ProjectId, Guid CreatedById, Guid AssignedToId);
-        public record TaskStatusDto(TaskStatus Status);
+        // ---------------------------------------------------------------
+        // OPTIONAL: Get task history (nice for Swagger demo)
+        // ---------------------------------------------------------------
+        [HttpGet("{id}/history")]
+        public async Task<IActionResult> GetHistory(Guid id)
+        {
+            var taskExists = await _db.Tasks.AnyAsync(t => t.Id == id);
+            if (!taskExists)
+                return NotFound("Task not found.");
+
+            var history = await _db.TaskHistories
+                .Where(h => h.TaskId == id)
+                .Include(h => h.PerformedBy)
+                .OrderBy(h => h.PerformedAt)
+                .Select(h => new
+                {
+                    h.Id,
+                    h.Action,
+                    h.Comments,
+                    PerformedBy = h.PerformedBy != null
+                        ? new { h.PerformedBy.Id, h.PerformedBy.Name, h.PerformedBy.Email }
+                        : null,
+                    h.PerformedAt
+                })
+                .ToListAsync();
+
+            return Ok(history);
+        }
     }
 }

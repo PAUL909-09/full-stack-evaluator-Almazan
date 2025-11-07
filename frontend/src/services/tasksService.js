@@ -1,34 +1,53 @@
 // frontend/src/services/tasksService.js
-import api from "@/api/axios"; // ✅ or "../api/axios" if alias not configured
+import api from "@/api/axios";
 
+/**
+ * All task-related API calls
+ */
 export const tasksService = {
-  // ✅ Fetch all tasks for a specific project
+  // ── READ ─────────────────────────────────────
+  /** Get all tasks for a project */
   getTasksByProject: async (projectId) => {
-    const response = await api.get(`/tasks/project/${projectId}`);
-    return response.data;
+    const { data } = await api.get(`/tasks/project/${projectId}`);
+    return data; // array of TaskItem
   },
 
-  // ✅ Fetch employees assigned to a specific project
-  getEmployeesByProject: async (projectId) => {
-    const response = await api.get(`/tasks/project/${projectId}/employees`);
-    return response.data;
+  /** Get a single task (with history) */
+  getTaskById: async (taskId) => {
+    const { data } = await api.get(`/tasks/${taskId}`);
+    return data;
   },
 
-  // ✅ Create a new task
+  /** Get task audit history */
+  getTaskHistory: async (taskId) => {
+    const { data } = await api.get(`/tasks/${taskId}/history`);
+    return data;
+  },
+
+  // ── CREATE ───────────────────────────────────
+  /** Create a new task */
   createTask: async (taskData) => {
-    const response = await api.post("/tasks", taskData);
-    return response.data;
+    const { data } = await api.post("/tasks", taskData);
+    return data;
   },
 
-  // ✅ Update task status
+  // ── UPDATE ───────────────────────────────────
+  /** Change task status */
   updateTaskStatus: async (taskId, status) => {
-    const response = await api.put(`/tasks/${taskId}/status`, { status });
-    return response.data;
+    const { data } = await api.put(`/tasks/${taskId}/status`, { status });
+    return data;
   },
 
-  // ✅ Assign task to employee (if you later add PUT /assign)
-  assignTaskToEmployee: async (taskId, employeeId) => {
-    const response = await api.put(`/tasks/${taskId}/assign`, { employeeId });
-    return response.data;
+  // ── DELETE ───────────────────────────────────
+  /** Delete a task (Evaluator / Admin only) */
+  deleteTask: async (taskId) => {
+    await api.delete(`/tasks/${taskId}`);
+  },
+
+  // ── EMPLOYEES ───────────────────────────────
+  /** Get employees that have at least one task in the project */
+  getEmployeesByProject: async (projectId) => {
+    const { data } = await api.get(`/tasks/project/${projectId}/employees`);
+    return data;
   },
 };

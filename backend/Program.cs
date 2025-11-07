@@ -6,8 +6,10 @@ using task_manager_api.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using System.Text.Json.Serialization; // ← ADD THIS
-using task_manager_api.Services.Projects;  // ✅ Updated to match the nested namespace
+using System.Text.Json.Serialization; 
+using task_manager_api.Services.Projects;
+using task_manager_api.Services.Tasks;
+
 
 
 DotNetEnv.Env.Load();
@@ -67,6 +69,8 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddHostedService<ExpiredInviteCleanupService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
+builder.Services.AddScoped<ITaskService, TaskService>();
+builder.Services.AddHttpContextAccessor();
 
 // ===== JWT Auth =====
 var jwtSecret = builder.Configuration["Jwt:Secret"]
@@ -105,6 +109,8 @@ app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskManager API v1"));
 
 app.UseCors("AllowReactApp");
+
+//TEMPORARY: Disable Auth for Testing (Optional)
 app.UseAuthentication();
 app.UseAuthorization();
 

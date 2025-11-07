@@ -157,10 +157,10 @@ const baseMenu = {
   ],
   Evaluator: [
     { to: "/evaluator/dashboard", icon: Home, label: "Dashboard" },
-    { to: "/projects/create", icon: FolderPlus, label: "New Project" },
+    // { to: "/projects/create", icon: FolderPlus, label: "New Project" },
     { to: "/tasks/create", icon: FilePlus, label: "New Task" },
     { to: "/evaluator/projects", icon: FolderOpen, label: "Project List" },
-    { to: "/evaluator/tasks", icon: CheckSquare, label: "Task List" },
+    // { to: "/evaluator/tasks", icon: CheckSquare, label: "Task List" },
     { to: "/evaluator/pending", icon: ClipboardCheck, label: "Pending Evaluations" },
   ],
   Employee: [{ to: "/employee/dashboard", icon: Home, label: "My Tasks" }],
