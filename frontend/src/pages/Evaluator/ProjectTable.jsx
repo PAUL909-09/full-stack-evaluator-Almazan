@@ -15,7 +15,7 @@ import {
   deleteProject,
 } from "@/services/projectService";
 
-const ProjectList = () => {
+const ProjectTable = () => {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -173,4 +173,4 @@ const ProjectList = () => {
   );
 };
 
-export default ProjectList;
+export default ProjectTable;

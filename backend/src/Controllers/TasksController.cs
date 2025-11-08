@@ -114,6 +114,37 @@ namespace task_manager_api.Controllers
                 return StatusCode(500, "An error occurred while creating the task.");
             }
         }
+        // PUT: api/tasks/{id}
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Evaluator")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTaskDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var (userId, _) = GetCurrentUser();
+
+            try
+            {
+                var updated = await _taskService.UpdateAsync(id, dto, userId);
+                if (updated == null)
+                    return NotFound("Task not found.");
+
+                return Ok(updated);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid("You can only update tasks for projects you own.");
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, "Failed to update task.");
+            }
+        }
 
         // PUT: api/tasks/{id}/status
         [HttpPut("{id}/status")]

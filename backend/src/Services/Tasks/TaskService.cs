@@ -56,8 +56,8 @@ namespace task_manager_api.Services.Tasks
         public async Task<TaskItem> CreateAsync(CreateTaskDto dto, Guid evaluatorId)
         {
             var evaluator = await _db.Users.FindAsync(dto.CreatedById);
-            var employee   = await _db.Users.FindAsync(dto.AssignedToId);
-            var project    = await _db.Projects.FindAsync(dto.ProjectId);
+            var employee = await _db.Users.FindAsync(dto.AssignedToId);
+            var project = await _db.Projects.FindAsync(dto.ProjectId);
 
             if (evaluator == null || employee == null || project == null)
                 throw new ArgumentException("Invalid references.");
@@ -68,12 +68,12 @@ namespace task_manager_api.Services.Tasks
 
             var task = new TaskItem
             {
-                Title         = dto.Title,
-                Description   = dto.Description,
-                CreatedById   = evaluator.Id,
-                AssignedToId  = employee.Id,
-                ProjectId     = project.Id,
-                Status        = TaskStatus.Todo
+                Title = dto.Title,
+                Description = dto.Description,
+                CreatedById = evaluator.Id,
+                AssignedToId = employee.Id,
+                ProjectId = project.Id,
+                Status = TaskStatus.Todo
             };
 
             _db.Tasks.Add(task);
@@ -94,9 +94,9 @@ namespace task_manager_api.Services.Tasks
 
             bool canUpdate = role switch
             {
-                "Employee"  => task.AssignedToId == userId,
+                "Employee" => task.AssignedToId == userId,
                 "Evaluator" => task.Project.EvaluatorId == userId,
-                _           => false
+                _ => false
             };
 
             if (!canUpdate)
@@ -140,13 +140,59 @@ namespace task_manager_api.Services.Tasks
         {
             var history = new TaskHistory
             {
-                TaskId       = taskId,
-                Action       = action,
-                Comments     = comments,
+                TaskId = taskId,
+                Action = action,
+                Comments = comments,
                 PerformedById = performedById
             };
             _db.TaskHistories.Add(history);
             await _db.SaveChangesAsync();
+        }
+
+        public async Task<TaskItem?> UpdateAsync(Guid id, UpdateTaskDto dto, Guid evaluatorId)
+        {
+            var task = await _db.Tasks
+                .Include(t => t.Project)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (task == null)
+                return null;
+
+            // Allow the project's evaluator or an Admin to update the task
+            bool isAdmin = await _db.Users
+                .Where(u => u.Id == evaluatorId && u.Role == Role.Admin)
+                .AnyAsync();
+
+            if (task.Project.EvaluatorId != evaluatorId && !isAdmin)
+                throw new UnauthorizedAccessException("You can only update tasks for projects you own.");
+
+            // Update fields when provided (null => keep existing)
+            if (!string.IsNullOrWhiteSpace(dto.Title))
+                task.Title = dto.Title;
+
+            // allow empty string as intentional reset? we use null as no-change
+            if (dto.Description is not null)
+                task.Description = dto.Description;
+
+            if (dto.AssignedToId.HasValue)
+            {
+                var employee = await _db.Users.FindAsync(dto.AssignedToId.Value);
+                if (employee == null)
+                    throw new ArgumentException("Assigned user not found.");
+                if (employee.Role != Role.Employee)
+                    throw new ArgumentException("Assigned user must be an employee.");
+
+                task.AssignedToId = employee.Id;
+            }
+
+            await _db.SaveChangesAsync();
+            await LogHistoryAsync(task.Id, "Updated", null, evaluatorId);
+
+            // reload include navigation properties for response if necessary
+            await _db.Entry(task).Reference(t => t.AssignedTo).LoadAsync();
+            await _db.Entry(task).Reference(t => t.Project).LoadAsync();
+
+            return task;
         }
 
         private static bool IsValidStatusTransition(TaskStatus from, TaskStatus to, string role)
@@ -155,13 +201,13 @@ namespace task_manager_api.Services.Tasks
             {
                 // Employee flow
                 (_, TaskStatus.InProgress, "Employee") => from == TaskStatus.Todo,
-                (_, TaskStatus.Done,       "Employee") => from == TaskStatus.InProgress,
-                (_, TaskStatus.Submitted,  "Employee") => from == TaskStatus.Done,
+                (_, TaskStatus.Done, "Employee") => from == TaskStatus.InProgress,
+                (_, TaskStatus.Submitted, "Employee") => from == TaskStatus.Done,
 
                 // Evaluator review
-                (_, TaskStatus.Approved,       "Evaluator") => true,
-                (_, TaskStatus.NeedsRevision,  "Evaluator") => true,
-                (_, TaskStatus.Rejected,       "Evaluator") => true,
+                (_, TaskStatus.Approved, "Evaluator") => true,
+                (_, TaskStatus.NeedsRevision, "Evaluator") => true,
+                (_, TaskStatus.Rejected, "Evaluator") => true,
 
                 _ => false
             };

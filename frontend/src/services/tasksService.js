@@ -2,52 +2,64 @@
 import api from "@/api/axios";
 
 /**
- * All task-related API calls
+ * GET /tasks/project/{projectId}
+ * Fetch all tasks for a project
  */
-export const tasksService = {
-  // ── READ ─────────────────────────────────────
-  /** Get all tasks for a project */
-  getTasksByProject: async (projectId) => {
-    const { data } = await api.get(`/tasks/project/${projectId}`);
-    return data; // array of TaskItem
-  },
+export async function getTasksByProject(projectId) {
+  const { data } = await api.get(`/tasks/project/${projectId}`);
+  return data;
+}
 
-  /** Get a single task (with history) */
-  getTaskById: async (taskId) => {
-    const { data } = await api.get(`/tasks/${taskId}`);
-    return data;
-  },
+/**
+ * GET /tasks/project/{projectId}/employees
+ * Get employees assigned to a project
+ */
+export async function getEmployeesByProject(projectId) {
+  const { data } = await api.get(`/tasks/project/${projectId}/employees`);
+  return data;
+}
 
-  /** Get task audit history */
-  getTaskHistory: async (taskId) => {
-    const { data } = await api.get(`/tasks/${taskId}/history`);
-    return data;
-  },
+/**
+ * GET /tasks/{id}
+ * Fetch a single task by ID
+ */
+export async function getTaskById(id) {
+  const { data } = await api.get(`/tasks/${id}`);
+  return data;
+}
 
-  // ── CREATE ───────────────────────────────────
-  /** Create a new task */
-  createTask: async (taskData) => {
-    const { data } = await api.post("/tasks", taskData);
-    return data;
-  },
+/**
+ * POST /tasks
+ * Create a new task
+ */
+export async function createTask(payload) {
+  const { data } = await api.post(`/tasks`, payload);
+  return data;
+}
 
-  // ── UPDATE ───────────────────────────────────
-  /** Change task status */
-  updateTaskStatus: async (taskId, status) => {
-    const { data } = await api.put(`/tasks/${taskId}/status`, { status });
-    return data;
-  },
+/**
+ * PUT /tasks/{id}
+ * Full update (Evaluator only)
+ */
+export async function updateTask(id, payload) {
+  const { data } = await api.put(`/tasks/${id}`, payload);
+  return data;
+}
 
-  // ── DELETE ───────────────────────────────────
-  /** Delete a task (Evaluator / Admin only) */
-  deleteTask: async (taskId) => {
-    await api.delete(`/tasks/${taskId}`);
-  },
+/**
+ * PUT /tasks/{id}/status
+ * Update only status (Employee + Evaluator)
+ */
+export async function updateTaskStatus(id, newStatus) {
+  const { data } = await api.put(`/tasks/${id}/status`, { status: newStatus });
+  return data;
+}
 
-  // ── EMPLOYEES ───────────────────────────────
-  /** Get employees that have at least one task in the project */
-  getEmployeesByProject: async (projectId) => {
-    const { data } = await api.get(`/tasks/project/${projectId}/employees`);
-    return data;
-  },
-};
+/**
+ * DELETE /tasks/{id}
+ * Delete a task
+ */
+export async function deleteTask(id) {
+  const { data } = await api.delete(`/tasks/${id}`);
+  return data;
+}

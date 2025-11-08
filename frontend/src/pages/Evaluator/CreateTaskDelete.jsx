@@ -20,6 +20,8 @@ import { toast } from "react-toastify";
 import { getMyProjects } from "@/services/projectService";
 import { tasksService } from "@/services/tasksService";
 
+import { authService } from "@/services/authService";
+
 export default function CreateTask() {
   const navigate = useNavigate();
 
@@ -32,6 +34,9 @@ export default function CreateTask() {
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // eslint-disable-next-line no-unused-vars
+  const user = authService.getCurrentUser(); // ← must contain .id
 
   // Load evaluator's projects
   useEffect(() => {
@@ -57,7 +62,9 @@ export default function CreateTask() {
 
     (async () => {
       try {
-        const data = await tasksService.getEmployeesByProject(selectedProjectId);
+        const data = await tasksService.getEmployeesByProject(
+          selectedProjectId
+        );
         setAssignedEmployees(data);
         setSelectedEmployeeId("");
       } catch (err) {
@@ -74,6 +81,12 @@ export default function CreateTask() {
       return;
     }
 
+    const user = authService.getCurrentUser();
+    if (!user?.id) {
+      toast.error("User not found. Please re-login.");
+      return;
+    }
+
     setSaving(true);
     try {
       await tasksService.createTask({
@@ -81,12 +94,14 @@ export default function CreateTask() {
         description: description.trim(),
         projectId: selectedProjectId,
         assignedToId: selectedEmployeeId,
+        createdById: user.id, // ✅ required by backend
       });
 
       toast.success("Task created!");
-      navigate(`/evaluator/project-tasks/${selectedProjectId}`);
+     // navigate(`/evaluator/project-tasks/${selectedProjectId}`);
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to create task.");
+      console.error("Create Task Error:", err);
+      toast.error(err.response?.data || "Failed to create task.");
     } finally {
       setSaving(false);
     }
@@ -117,13 +132,18 @@ export default function CreateTask() {
           {/* Project Selector */}
           <div>
             <label className="block text-sm font-medium mb-2">Project</label>
-            <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+            <Select
+              value={selectedProjectId}
+              onValueChange={setSelectedProjectId}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select a project..." />
               </SelectTrigger>
               <SelectContent>
                 {projects.length === 0 ? (
-                  <SelectItem value="none" disabled>No projects found</SelectItem>
+                  <SelectItem value="none" disabled>
+                    No projects found
+                  </SelectItem>
                 ) : (
                   projects.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
@@ -185,7 +205,9 @@ export default function CreateTask() {
 
           {/* Task Title */}
           <div>
-            <label className="block text-sm font-medium mb-2">Task Title *</label>
+            <label className="block text-sm font-medium mb-2">
+              Task Title *
+            </label>
             <Input
               placeholder="e.g., Implement login API"
               value={title}
@@ -211,7 +233,9 @@ export default function CreateTask() {
           <div className="pt-4">
             <Button
               onClick={handleSubmit}
-              disabled={saving || !title || !selectedProjectId || !selectedEmployeeId}
+              disabled={
+                saving || !title || !selectedProjectId || !selectedEmployeeId
+              }
               className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
             >
               {saving ? (
@@ -229,4 +253,3 @@ export default function CreateTask() {
     </div>
   );
 }
-

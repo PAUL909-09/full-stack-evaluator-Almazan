@@ -17,6 +17,10 @@ namespace task_manager_api.Services.Tasks
         Task<IEnumerable<User>> GetEmployeesByProjectAsync(Guid projectId, Guid evaluatorId);
         Task<TaskItem> CreateAsync(CreateTaskDto dto, Guid evaluatorId);
         Task<TaskItem?> UpdateStatusAsync(Guid id, TaskStatus newStatus, Guid userId, string role);
+
+        // <-- NEW: update task fields (title/description/assignedTo)
+        Task<TaskItem?> UpdateAsync(Guid id, UpdateTaskDto dto, Guid evaluatorId);
+
         Task<bool> DeleteAsync(Guid id, Guid evaluatorId);
     }
 }

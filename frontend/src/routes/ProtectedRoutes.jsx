@@ -15,12 +15,14 @@ import AdminVerifyUsers from "@/pages/Admin/AdminVerifyUsers";
 // Evaluator pages
 import EvaluatorDashboard from "@/pages/Evaluator/EvaluatorDashboard";
 import CreateProject from "@/pages/Evaluator/CreateProject";
-import CreateTask from "@/pages/Evaluator/CreateTask";
-import ProjectList from "@/pages/Evaluator/ProjectList";
+import EvaluatorLayout from "@/components/layout/EvaluatorLayout"; // ← Import
+// import CreateTask from "@/pages/Evaluator/CreateTask";
+import ProjectTable from "@/pages/Evaluator/ProjectTable";
 import ProjectTasks from "@/pages/Evaluator/ProjectTasks";
 import AssignEmployeesToProject from "@/pages/Evaluator/AssignEmployeesToProject";
 import PendingEvaluations from "@/pages/Evaluator/PendingEvaluations";
 import ManageAssignments from "@/pages/Evaluator/ManageAssignments";
+import TaskTable from "@/pages/Evaluator/TaskTable";
 
 // Employee pages
 import EmployeeDashboard from "@/pages/Employee/EmployeeDashboard";
@@ -55,7 +57,6 @@ export default function ProtectedRoutes() {
             </AdminOnly>
           }
         />
-
         {/* === EVALUATOR ROUTES === */}
         <Route
           path="/evaluator/dashboard"
@@ -73,21 +74,26 @@ export default function ProtectedRoutes() {
             </EvaluatorOnly>
           }
         />
-        <Route
+        {/* <Route
           path="/tasks/create"
           element={
             <EvaluatorOnly>
               <CreateTask />
             </EvaluatorOnly>
           }
-        />
+        /> */}
         <Route
           path="/evaluator/projects"
           element={
             <EvaluatorOnly>
-              <ProjectList />
+              <ProjectTable />
             </EvaluatorOnly>
           }
+        />
+        <Route path="/evaluator/tasks" element={<TaskTable />} />
+        <Route
+          path="/evaluator/project/:projectId/tasks"
+          element={<TaskTable />}
         />
         <Route
           path="/evaluator/pending"
@@ -113,7 +119,14 @@ export default function ProtectedRoutes() {
             </EvaluatorOnly>
           }
         />
-
+        <Route
+          path="/evaluator/project-tasks/:projectId"
+          element={
+            <EvaluatorOnly>
+              <ProjectTasks />
+            </EvaluatorOnly>
+          }
+        />
         {/* ── NEW: Bulk-assign employees to a project ── */}
         {/* <Route
           path="/evaluator/assign-employees/:projectId"
@@ -139,7 +152,6 @@ export default function ProtectedRoutes() {
             </EvaluatorOnly>
           }
         />
-
         {/* === EMPLOYEE ROUTES === */}
         <Route
           path="/employee/dashboard"
@@ -149,7 +161,6 @@ export default function ProtectedRoutes() {
             </EmployeeOnly>
           }
         />
-
         {/* === SHARED ROUTES === */}
         <Route path="/tasks/:id" element={<TaskDetails />} />
       </Route>

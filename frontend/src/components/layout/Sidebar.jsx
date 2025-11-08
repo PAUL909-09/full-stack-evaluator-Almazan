@@ -29,9 +29,10 @@ const baseMenu = {
   ],
   Evaluator: [
     { to: "/evaluator/dashboard", icon: Home, label: "Dashboard" },
-    { to: "/projects/create", icon: FolderPlus, label: "New Project" }, // UNCOMMENTED
-    { to: "/tasks/create", icon: FilePlus, label: "New Task" },
-    { to: "/evaluator/projects", icon: FolderOpen, label: "Manage Assignments" },
+    // { to: "/projects/create", icon: FolderPlus, label: "New Project" }, // UNCOMMENTED
+    // { to: "/tasks/create", icon: FilePlus, label: "Manage Task" },
+    {to: "/evaluator/tasks", icon: CheckSquare, label: "Manage Tasks" },
+    { to: "/evaluator/projects", icon: FolderOpen, label: "Manage Projects" },
     // {
     //   to: "/evaluator/assign-employees",
     //   icon: UserPlus,
