@@ -1,6 +1,6 @@
 // frontend/src/hooks/useAuth.js
 import { useState, useEffect } from "react";
-import { authService } from "@/api/authService";
+import { authService } from "@/services/authService";
 
 export function useAuth() {
   const [user, setUser] = useState(null);

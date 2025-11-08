@@ -1,4 +1,4 @@
-import { authService } from "@/api/authService";
+import { authService } from "@/services/authService";
 
 function LogoutButton() {
   const handleLogout = () => {

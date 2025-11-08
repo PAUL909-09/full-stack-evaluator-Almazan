@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using task_manager_api.Services.Projects;
 using System.Security.Claims;
-using System.ComponentModel.DataAnnotations;   // <-- NEW
+using System.ComponentModel.DataAnnotations; 
+using task_manager_api.DTOs.Projects;
+
 
 namespace task_manager_api.Controllers
 {
@@ -136,6 +138,23 @@ namespace task_manager_api.Controllers
             var projects = await _projectService.GetUserProjectsAsync(userId);
             return Ok(projects);
         }
+
+        [HttpPost("{id}/assign")]
+        [Authorize(Roles = "Evaluator,Admin")]
+        public async Task<IActionResult> AssignEmployees(Guid id, [FromBody] AssignEmployeesDto dto)
+        {
+            var success = await _projectService.AssignEmployeesAsync(id, dto.EmployeeIds, CurrentUserId);
+            return success ? Ok() : NotFound("Project not found or permission denied.");
+        }
+
+        [HttpGet("{id}/assignments")]
+        [Authorize(Roles = "Evaluator,Admin")]
+        public async Task<IActionResult> GetAssignments(Guid id)
+        {
+            var employees = await _projectService.GetAssignedEmployeesAsync(id);
+            return Ok(employees);
+        }
+
 
         // -----------------------------------------------------------------
         // DTOs – validation attributes

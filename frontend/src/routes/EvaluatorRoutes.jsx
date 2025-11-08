@@ -6,6 +6,8 @@ import CreateProject from "@/pages/Evaluator/CreateProject";
 import CreateTask from "@/pages/Evaluator/CreateTask";
 import ProjectList from "@/pages/Evaluator/ProjectList";
 import PendingEvaluations from "@/pages/Evaluator/PendingEvaluations";
+import AssignEmployeesToProject from "@/pages/Evaluator/AssignEmployeesToProject";
+import ManageAssignments from "@/pages/Evaluator/ManageAssignments";
 
 export default [
   <Route
@@ -49,9 +51,25 @@ export default [
     path="/evaluator/pending"
     element={
       <EvaluatorOnly>
-        <PendingEvaluations/>
+        <PendingEvaluations />
       </EvaluatorOnly>
     }
   />,
-
+  <Route
+    key="assign-employees"
+    path="/evaluator/assign-employees/:projectId?"
+    element={
+      <EvaluatorOnly>
+        <AssignEmployeesToProject />
+      </EvaluatorOnly>
+    }
+  />,
+  <Route
+    path="/evaluator/manage-assignments/:projectId"
+    element={
+      <EvaluatorOnly>
+        <ManageAssignments />
+      </EvaluatorOnly>
+    }
+  />,
 ];

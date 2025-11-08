@@ -20,6 +20,7 @@ import ProjectList from "@/pages/Evaluator/ProjectList";
 import ProjectTasks from "@/pages/Evaluator/ProjectTasks";
 import AssignEmployeesToProject from "@/pages/Evaluator/AssignEmployeesToProject";
 import PendingEvaluations from "@/pages/Evaluator/PendingEvaluations";
+import ManageAssignments from "@/pages/Evaluator/ManageAssignments";
 
 // Employee pages
 import EmployeeDashboard from "@/pages/Employee/EmployeeDashboard";
@@ -114,11 +115,27 @@ export default function ProtectedRoutes() {
         />
 
         {/* ── NEW: Bulk-assign employees to a project ── */}
-        <Route
+        {/* <Route
           path="/evaluator/assign-employees/:projectId"
           element={
             <EvaluatorOnly>
               <AssignEmployeesToProject />
+            </EvaluatorOnly>
+          }
+        /> */}
+        <Route
+          path="/evaluator/assign-employees/:projectId?"
+          element={
+            <EvaluatorOnly>
+              <AssignEmployeesToProject />
+            </EvaluatorOnly>
+          }
+        />
+        <Route
+          path="/evaluator/manage-assignments/:projectId"
+          element={
+            <EvaluatorOnly>
+              <ManageAssignments />
             </EvaluatorOnly>
           }
         />

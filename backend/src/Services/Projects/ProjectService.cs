@@ -4,6 +4,7 @@ using task_manager_api.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using task_manager_api.DTOs.Users;
 
 namespace task_manager_api.Services.Projects
 {
@@ -92,5 +93,64 @@ namespace task_manager_api.Services.Projects
                 .ThenInclude(t => t.AssignedTo)
                 .ToListAsync();
         }
+
+        
+       // ───────────────────────────────────────────────
+// ASSIGN EMPLOYEES TO A PROJECT
+// ───────────────────────────────────────────────
+public async Task<bool> AssignEmployeesAsync(Guid projectId, List<Guid> employeeIds, Guid currentUserId)
+{
+    var project = await _db.Projects
+        .Include(p => p.AssignedEmployees)
+        .FirstOrDefaultAsync(p => p.Id == projectId);
+
+    if (project == null)
+        return false;
+
+    var currentUser = await _db.Users.FindAsync(currentUserId);
+    var isAdmin = currentUser?.Role == Role.Admin;
+
+    // Evaluator can only assign to their own projects
+    if (!isAdmin && project.EvaluatorId != currentUserId)
+        return false;
+
+    // Remove all existing assignments
+    _db.ProjectAssignments.RemoveRange(project.AssignedEmployees);
+
+    // Add new ones
+    foreach (var empId in employeeIds.Distinct())
+    {
+        var employee = await _db.Users.FindAsync(empId);
+        if (employee == null || employee.Role != Role.Employee)
+            continue;
+
+        _db.ProjectAssignments.Add(new ProjectAssignment
+        {
+            ProjectId = projectId,
+            UserId = empId
+        });
+    }
+
+    await _db.SaveChangesAsync();
+    return true;
+}
+        // ───────────────────────────────────────────────
+// GET EMPLOYEES ASSIGNED TO A PROJECT
+// ───────────────────────────────────────────────
+public async Task<IEnumerable<EmployeeDto>> GetAssignedEmployeesAsync(Guid projectId)
+{
+    var employees = await _db.ProjectAssignments
+        .Where(a => a.ProjectId == projectId)
+        .Include(a => a.User)
+        .Select(a => new EmployeeDto(
+            a.User.Id,
+            a.User.Name,
+            a.User.Email))
+        .ToListAsync();
+
+    return employees;
+}
+
+        
     }
 }

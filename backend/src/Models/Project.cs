@@ -14,5 +14,8 @@ namespace task_manager_api.Models
         public User Evaluator { get; set; } = null!;
 
         public List<TaskItem> Tasks { get; set; } = new();
+
+         public List<ProjectAssignment> AssignedEmployees { get; set; } = new();
+
     }
 }

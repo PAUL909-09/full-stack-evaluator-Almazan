@@ -1,228 +1,107 @@
-// src/pages/Evaluator/AssignEmployeesToProject.jsx
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { authService } from "@/api/authService";
-import { tasksService } from "@/services/tasksService"; // Fixed path
-import { getEvaluatorProjects, getAllEmployees } from "@/services/projectService";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify"; // ✅ use react-toastify instead
 
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox"; // Fixed .jsx
-import Badge from "@/components/ui/badge"; // Add badge
-import { useToast } from "@/hooks/use-toast";
+import { getProjectById } from "@/services/projectService";
+import { assignEmployees } from "@/services/projectAssignmentService"; // Added import
+import { getEmployees } from "@/services/userService";
+
 
 export default function AssignEmployeesToProject() {
-  const { projectId: urlProjectId } = useParams(); // Optional: pre-select from URL
-  const [selectedProjectId, setSelectedProjectId] = useState(urlProjectId || "");
-  const [projects, setProjects] = useState([]);
-  const [assignedEmployees, setAssignedEmployees] = useState([]);
-  const [allEmployees, setAllEmployees] = useState([]);
-  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
+  const { projectId } = useParams();
   const navigate = useNavigate();
-  const user = authService.getCurrentUser();
 
-  // Load evaluator projects
+  const [employees, setEmployees] = useState([]);
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState([]);
+  const [project, setProject] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    (async () => {
+    async function fetchData() {
       try {
-        const data = await getEvaluatorProjects();
-        setProjects(data);
-        // Auto-select if projectId in URL
-        if (urlProjectId && data.some(p => p.id === urlProjectId)) {
-          setSelectedProjectId(urlProjectId);
-        }
-      } catch {
-        toast({ title: "Error", description: "Failed to load projects", variant: "destructive" });
+        const [users, projectData] = await Promise.all([
+          getEmployees(), // service: /api/users?role=Employee
+          getProjectById(projectId),
+        ]);
+        setEmployees(users);
+        setProject(projectData);
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to load project or employee data.");
+      } finally {
+        setLoading(false);
       }
-    })();
-  }, [toast, urlProjectId]);
-
-  // Load all employees
-  useEffect(() => {
-    (async () => {
-      try {
-        const data = await getAllEmployees();
-        setAllEmployees(data);
-      } catch {
-        toast({ title: "Error", description: "Failed to load employees", variant: "destructive" });
-      }
-    })();
-  }, [toast]);
-
-  // Load already-assigned employees when project changes
-  useEffect(() => {
-    if (!selectedProjectId) {
-      setAssignedEmployees([]);
-      return;
     }
-    (async () => {
-      try {
-        const data = await tasksService.getEmployeesByProject(selectedProjectId);
-        setAssignedEmployees(data);
-      } catch {
-        toast({ title: "Error", description: "Failed to load assigned employees", variant: "destructive" });
-        setAssignedEmployees([]);
-      }
-    })();
-  }, [selectedProjectId, toast]);
+    fetchData();
+  }, [projectId]);
 
-  // Toggle employee selection
-  const toggleEmployee = (empId, checked) => {
+  const toggleEmployee = (id) => {
     setSelectedEmployeeIds((prev) =>
-      checked ? [...prev, empId] : prev.filter((id) => id !== empId)
+      prev.includes(id)
+        ? prev.filter((uid) => uid !== id)
+        : [...prev, id]
     );
   };
 
-  // Bulk assign
   const handleAssign = async () => {
-    if (!selectedProjectId || selectedEmployeeIds.length === 0) {
-      toast({ title: "Select", description: "Pick a project and at least one employee.", variant: "destructive" });
+    if (selectedEmployeeIds.length === 0) {
+      toast.warn("Please select at least one employee."); // ⚠️ use warn for better UX
       return;
     }
 
-    setLoading(true);
     try {
-      const promises = selectedEmployeeIds.map((empId) =>
-        tasksService.createTask({
-          title: `Task for ${allEmployees.find((e) => e.id === empId)?.name || "Employee"}`,
-          description: "Assigned via bulk assignment.",
-          projectId: selectedProjectId,
-          createdById: user.id,
-          assignedToId: empId,
-        })
-      );
-
-      await Promise.all(promises);
-
-      toast({ title: "Success", description: `${selectedEmployeeIds.length} employee(s) assigned.` });
-
-      // Refresh assigned list
-      const fresh = await tasksService.getEmployeesByProject(selectedProjectId);
-      setAssignedEmployees(fresh);
-      setSelectedEmployeeIds([]);
-      navigate("/evaluator/dashboard");
+      await assignEmployees(projectId, selectedEmployeeIds); // Fixed function name
+      toast.success("Employees assigned successfully!");
+      navigate(`/evaluator/manage-assignments/${projectId}`);
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || "Assignment failed";
-      toast({ title: "Error", description: msg, variant: "destructive" });
-    } finally {
-      setLoading(false);
+      console.error(err);
+      toast.error(err.response?.data || "Failed to assign employees.");
     }
   };
 
-  // Employees not yet assigned
-  const availableEmployees = allEmployees.filter(
-    (e) => !assignedEmployees.some((a) => a.id === e.id)
-  );
+  if (loading)
+    return (
+      <p className="text-center text-gray-500 mt-10">Loading...</p>
+    );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-sky-50 to-white p-4">
-      <div className="max-w-4xl mx-auto">
-        <Card className="shadow-xl">
-          <CardHeader className="text-center pb-6">
-            <CardTitle className="text-2xl font-bold text-gray-800">
-              Assign Employees to Project
-            </CardTitle>
-          </CardHeader>
+    <div className="max-w-2xl mx-auto mt-10 bg-white shadow-md rounded-2xl p-6">
+      <h2 className="text-2xl font-bold mb-4">
+        Assign Employees to Project
+      </h2>
+      <p className="text-gray-600 mb-6">
+        Project: <strong>{project?.name}</strong>
+      </p>
 
-          <CardContent className="space-y-6">
-            {/* Project selector */}
-            <div>
-              <Label htmlFor="project">Select Project</Label>
-              <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-                <SelectTrigger id="project" className="mt-1">
-                  <SelectValue placeholder="Choose a project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.length === 0 ? (
-                    <SelectItem value="none" disabled>No projects</SelectItem>
-                  ) : (
-                    projects.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Currently assigned */}
-            {selectedProjectId && (
-              <div>
-                <Label>Currently Assigned</Label>
-                <div className="mt-2 space-y-2">
-                  {assignedEmployees.length === 0 ? (
-                    <p className="text-gray-500">No one yet.</p>
-                  ) : (
-                    assignedEmployees.map((emp) => {
-                      const taskCount = emp.taskCount || 0;
-                      return (
-                        <div
-                          key={emp.id}
-                          className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                        >
-                          <span>
-                            {emp.name} ({emp.email})
-                          </span>
-                          <Badge variant="secondary">
-                            {taskCount} task{taskCount !== 1 ? "s" : ""}
-                          </Badge>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Employee picker */}
-            {selectedProjectId && (
-              <div>
-                <Label>Select Employees to Assign</Label>
-                <div className="mt-2 space-y-2 max-h-60 overflow-y-auto">
-                  {availableEmployees.length === 0 ? (
-                    <p className="text-gray-500">All employees already assigned.</p>
-                  ) : (
-                    availableEmployees.map((emp) => (
-                      <div key={emp.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`emp-${emp.id}`}
-                          checked={selectedEmployeeIds.includes(emp.id)}
-                          onCheckedChange={(c) => toggleEmployee(emp.id, c)}
-                        />
-                        <Label htmlFor={`emp-${emp.id}`} className="text-sm cursor-pointer">
-                          {emp.name} ({emp.email})
-                        </Label>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Submit */}
-            <Button
-              onClick={handleAssign}
-              disabled={!selectedProjectId || selectedEmployeeIds.length === 0 || loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5"
+      <div className="space-y-3 mb-6">
+        {employees.length === 0 ? (
+          <p>No employees available.</p>
+        ) : (
+          employees.map((emp) => (
+            <label
+              key={emp.id}
+              className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-gray-50 cursor-pointer"
             >
-              {loading
-                ? "Assigning..."
-                : `Assign ${selectedEmployeeIds.length} Employee(s)`}
-            </Button>
-          </CardContent>
-        </Card>
+              <input
+                type="checkbox"
+                checked={selectedEmployeeIds.includes(emp.id)}
+                onChange={() => toggleEmployee(emp.id)}
+              />
+              <span>
+                {emp.name}{" "}
+                <small className="text-gray-500">({emp.email})</small>
+              </span>
+            </label>
+          ))
+        )}
       </div>
+
+      <button
+        onClick={handleAssign}
+        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg"
+      >
+        Assign Selected Employees
+      </button>
     </div>
   );
 }

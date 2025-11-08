@@ -71,6 +71,8 @@ builder.Services.AddHostedService<ExpiredInviteCleanupService>();
 builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IProjectAssignmentService, ProjectAssignmentService>();
+
 
 // ===== JWT Auth =====
 var jwtSecret = builder.Configuration["Jwt:Secret"]

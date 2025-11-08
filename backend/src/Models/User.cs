@@ -23,6 +23,9 @@ namespace task_manager_api.Models
         // ✅ NEW: Refresh Token Support
         public string? RefreshToken { get; set; }
         public DateTime? RefreshTokenExpiry { get; set; }
+
+        public ICollection<ProjectAssignment> AssignedProjects { get; set; } = new List<ProjectAssignment>();
+
     }
 
 }

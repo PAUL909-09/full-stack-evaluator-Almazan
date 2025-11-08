@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom"; // ← ADD THIS
 import { Button } from "@/components/ui/button";
-import { Plus, Edit, Trash2, Folder, Eye } from "lucide-react"; // ← ADD Eye
+import { Plus, Edit, Trash2, Folder, Users  } from "lucide-react"; // ← ADD EyeView Tasks
 import { toast } from "react-toastify";
 import ConfirmModal from "@/components/ConfirmModal";
 import DataTable from "@/components/table/DataTable";
@@ -20,7 +20,10 @@ const ProjectList = () => {
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
-  const [createModal, setCreateModal] = useState({ open: false, project: null });
+  const [createModal, setCreateModal] = useState({
+    open: false,
+    project: null,
+  });
 
   const fetchProjects = async () => {
     try {
@@ -72,7 +75,7 @@ const ProjectList = () => {
 
   // ── TABLE COLUMNS ─────────────────────────────────────
   const columns = [
-    { key: "name",        label: "Project Name" },
+    { key: "name", label: "Project Name" },
     { key: "description", label: "Description" },
   ];
 
@@ -109,12 +112,20 @@ const ProjectList = () => {
           actions={(project) => (
             <div className="flex justify-center items-center space-x-2">
               {/* View Tasks */}
-              <Link
+              {/* <Link
                 to={`/evaluator/project-tasks/${project.id}`}
                 className="p-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full shadow-md transition"
                 title="View Tasks"
               >
                 <Eye className="h-4 w-4" />
+              </Link> */}
+              {/* Manage Assignments */}
+              <Link
+                to={`/evaluator/manage-assignments/${project.id}`}
+                className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-full shadow-md transition"
+                title="Manage Assignments"
+              >
+                <Users className="h-4 w-4" />
               </Link>
 
               {/* Edit */}

@@ -1,7 +1,7 @@
 // frontend/src/pages/VerifyInvite.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { authService } from "@/api/authService";
+import { authService } from "@/services/authService";
 import logo from "@/assets/logo.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

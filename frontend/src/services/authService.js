@@ -1,5 +1,5 @@
 // frontend/src/api/authService.js
-import api from "./axios";
+import api from "../api/axios";
 
 const TOKEN_KEY = "token";
 const REFRESH_KEY = "refreshToken";

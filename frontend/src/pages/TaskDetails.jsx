@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { authService } from "@/api/authService";
+import { authService } from "@/services/authService";
 
 export default function TaskDetails() {
   const { id } = useParams();
