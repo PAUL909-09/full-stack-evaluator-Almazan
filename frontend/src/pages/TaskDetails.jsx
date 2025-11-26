@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-toastify";
 import { authService } from "@/services/authService";
 
 export default function TaskDetails() {
@@ -16,29 +16,23 @@ export default function TaskDetails() {
   const [comments, setComments] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const user = authService.getCurrentUser();
-  const { toast } = useToast();
 
-  // Fixed: Added 'toast' to dependency array
   useEffect(() => {
     const fetchTask = async () => {
       try {
         const res = await api.get(`/tasks/${id}`);
         setTask(res.data);
       } catch (err) {
-        toast({
-          title: "Failed to load task",
-          description: err.message || "Please try again.",
-          variant: "destructive"
-        });
+        toast.error("Failed to load task: " + (err.message || "Please try again."));
       }
     };
 
     fetchTask();
-  }, [id, toast]); // ESLint satisfied
+  }, [id]);
 
   const evaluate = async () => {
     if (!score || isNaN(score) || score < 0 || score > 10) {
-      toast({ title: "Invalid score", description: "Score must be 0–10", variant: "destructive" });
+      toast.error("Invalid score: Score must be 0–10");
       return;
     }
 
@@ -49,16 +43,12 @@ export default function TaskDetails() {
         score: Number(score),
         comments: comments.trim()
       });
-      toast({ title: "Success!", description: "Evaluation submitted." });
+      toast.success("Success! Evaluation submitted.");
       setScore("");
       setComments("");
       // Optionally refetch task to show evaluation
     } catch (err) {
-      toast({
-        title: "Evaluation failed",
-        description: err.message || "Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Evaluation failed: " + (err.message || "Please try again."));
     } finally {
       setIsSubmitting(false);
     }

@@ -13,8 +13,12 @@ import api from "@/api/axios";
  * Uses the new `/api/projects/my` endpoint (most common case).
  */
 export async function getMyProjects() {
-  const { data } = await api.get("/projects/my");
-  return data; // [] or Project[]
+  try {
+    const { data } = await api.get("/projects/my");
+    return data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to get my projects");
+  }
 }
 
 /**

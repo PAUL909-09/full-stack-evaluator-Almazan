@@ -2,31 +2,75 @@
 import React, { useEffect, useState } from "react";
 import api from "@/api/axios";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-toastify";
 
 export default function EmployeeDashboard() {
-  const [tasks, setTasks] = useState([]);        // ← NOW USED
-  const { toast } = useToast();
+  const [tasks, setTasks] = useState([]);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [pendingSubmission, setPendingSubmission] = useState(null);
 
-  // ← FIXED: Added 'toast' to deps + safe error handling
   useEffect(() => {
-    api.get("/tasks?mine=true")
+    api.get("/employees/tasks")  // Ensure this matches your backend route
       .then(res => setTasks(res.data))
-      .catch(err => toast({
-        title: "Error loading tasks",
-        description: err.message || "Try again later",
-        variant: "destructive"
-      }));
-  }, [toast]);  // ← ESLint happy
+      .catch(err => toast.error("Error loading tasks: " + (err.message || "Try again later")));
+  }, []);
 
-  // ← FIXED: updateStatus NOW USED inside the map
   const updateStatus = async (id, status) => {
+    if (status === "Submitted") {
+      if (!selectedFile) {
+        setPendingSubmission(id);
+        toast.info("Please select a proof file (PDF or image) to submit.");
+        return;
+      }
+      // Additional client-side validation
+      const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
+      if (!allowedTypes.includes(selectedFile.type)) {
+        toast.error("Unsupported file type. Only PDF, JPG, or PNG allowed.");
+        return;
+      }
+      if (selectedFile.size > 5 * 1024 * 1024) {
+        toast.error("File too large. Max size is 5MB.");
+        return;
+      }
+    }
+
+    const formData = new FormData();
+    formData.append("status", status);
+    if (status === "Submitted" && selectedFile) {
+      formData.append("proofFile", selectedFile);
+    }
+
     try {
-      await api.put(`/tasks/${id}/status`, { status });
-      toast({ title: "Done!", description: "Status updated" });
-      setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+      const res = await api.put(`/employees/tasks/${id}/status`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("Status updated successfully!");
+      setTasks(prev => prev.map(t => t.id === id ? res.data : t));
+      setSelectedFile(null);
+      setPendingSubmission(null);
     } catch (err) {
-      toast({ title: "Failed", description: err.message, variant: "destructive" });
+      console.error("Upload error:", err);  // ✅ Log full error for debugging
+      const errorMsg = err.response?.data?.message || err.message || "Upload failed";
+      toast.error("Failed: " + errorMsg);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
+      if (!allowedTypes.includes(file.type)) {
+        toast.error("Unsupported file type. Only PDF, JPG, or PNG allowed.");
+        setSelectedFile(null);
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("File too large. Max size is 5MB.");
+        setSelectedFile(null);
+        return;
+      }
+      setSelectedFile(file);
+      toast.success("File selected: " + file.name);
     }
   };
 
@@ -50,13 +94,39 @@ export default function EmployeeDashboard() {
                 <span className={`px-3 py-1 rounded-full text-xs font-bold
                   ${task.status === "Done" ? "bg-green-100 text-green-800" :
                     task.status === "InProgress" ? "bg-yellow-100 text-yellow-800" :
+                    task.status === "Submitted" ? "bg-blue-100 text-blue-800" :
                     "bg-gray-100 text-gray-800"}`}>
                   {task.status}
                 </span>
               </div>
 
+              {/* Show submission details if submitted */}
+              {task.submittedAt && (
+                <p className="text-sm text-gray-500 mt-2">
+                  Submitted on: {new Date(task.submittedAt).toLocaleString()}
+                </p>
+              )}
+
+              {/* File upload for submission */}
+              {pendingSubmission === task.id && (
+                <div className="mt-4">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Upload Proof (PDF or Image):
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    onChange={handleFileChange}
+                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  {selectedFile && (
+                    <p className="text-xs text-green-600 mt-1">Selected: {selectedFile.name}</p>
+                  )}
+                </div>
+              )}
+
               <div className="flex gap-2 mt-5">
-                {["Todo", "InProgress", "Done"].map(s => (
+                {["Todo", "InProgress", "Done", "Submitted"].map(s => (
                   <Button
                     key={s}
                     size="sm"

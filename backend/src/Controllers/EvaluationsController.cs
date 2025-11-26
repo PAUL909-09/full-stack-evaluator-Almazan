@@ -1,174 +1,94 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
-using task_manager_api.Data;
+using task_manager_api.Controllers;
+using task_manager_api.DTOs.Evaluation;
 using task_manager_api.Models;
-using TaskStatus = task_manager_api.Models.TaskStatus;
+using task_manager_api.Services;
 
 namespace task_manager_api.Controllers
 {
-    [ApiController]
-    [Route("api/tasks/{taskId}/evaluations")]
-    [Authorize]
-    public class EvaluationsController : ControllerBase
+    [Route("api/evaluations")]  // ✅ Explicit route to avoid conflicts
+    public class EvaluationsController : BaseApiController
     {
-        private readonly ApplicationDbContext _db;
-        public EvaluationsController(ApplicationDbContext db) => _db = db;
+        private readonly IEvaluationService _service;
 
-        // POST: api/tasks/{taskId}/evaluations
-        [HttpPost]
-        [Authorize(Roles = "Evaluator")]
-        public async Task<IActionResult> Evaluate(Guid taskId, [FromBody] EvalDto dto)
+        public EvaluationsController(IEvaluationService service, IHttpContextAccessor accessor)
+            : base(accessor)
         {
-            var evaluatorId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            if (dto.EvaluatorId != evaluatorId)
-                return BadRequest("Can only evaluate as yourself.");
+            _service = service;
+        }
 
-            var task = await _db.Tasks.Include(t => t.Evaluation).FirstOrDefaultAsync(t => t.Id == taskId);
-            if (task == null) return NotFound("Task not found.");
+        // --------------------------------------------------------------------
+        // Get evaluation for a task
+        // --------------------------------------------------------------------
+        [HttpGet("{taskId:guid}")]  // ✅ Unique: /api/evaluations/{taskId}
+        [Authorize]
+        public async Task<IActionResult> GetEvaluation(Guid taskId)
+        {
+            var evaluation = await _service.GetEvaluationByTaskId(taskId);
+            if (evaluation == null) return NotFound();
+            return Ok(evaluation);
+        }
 
-            if (task.Evaluation != null)
-                return Conflict("Task already has an evaluation. Use PUT to update.");
-
-            var eval = new Evaluation
+        // --------------------------------------------------------------------
+        // Create evaluation
+        // --------------------------------------------------------------------
+        [HttpPost]  // ✅ Unique: /api/evaluations (POST)
+        [Authorize(Roles = "Evaluator")]
+        public async Task<IActionResult> CreateEvaluation([FromBody] EvaluationCreateDto dto)
+        {
+            var (userId, _) = GetCurrentUser();
+            var evaluation = new Evaluation
             {
-                TaskId = taskId,
-                EvaluatorId = evaluatorId,
+                TaskId = dto.TaskId,
                 Status = dto.Status,
                 Comments = dto.Comments,
+                EvaluatorId = userId,
                 EvaluatedAt = DateTime.UtcNow
             };
+            await _service.CreateEvaluation(evaluation);
+            return Ok(new { message = "Evaluation created." });
+        }
 
-            // Apply task status changes depending on evaluation
-            ApplyEvaluationToTask(task, eval.Status);
-
-            _db.Evaluations.Add(eval);
-
-            // Add history entry
-            _db.TaskHistories.Add(new TaskHistory
+        // --------------------------------------------------------------------
+        // Update evaluation
+        // --------------------------------------------------------------------
+        [HttpPut("{taskId:guid}")]  // ✅ Unique: /api/evaluations/{taskId} (PUT)
+        [Authorize(Roles = "Evaluator")]
+        public async Task<IActionResult> UpdateEvaluation(Guid taskId, [FromBody] EvaluationUpdateDto dto)
+        {
+            var (userId, _) = GetCurrentUser();
+            var evaluation = new Evaluation
             {
                 TaskId = taskId,
-                Action = $"Evaluation set to {eval.Status}",
-                Comments = eval.Comments,
-                PerformedById = evaluatorId,
-                PerformedAt = DateTime.UtcNow
-            });
-
-            await _db.SaveChangesAsync();
-            return Ok(eval);
+                Status = dto.Status,
+                Comments = dto.Comments,
+                EvaluatorId = userId
+            };
+            await _service.UpdateEvaluation(evaluation);
+            return Ok(new { message = "Evaluation updated." });
         }
 
-        // GET: api/tasks/{taskId}/evaluations
-        [HttpGet]
-        public async Task<IActionResult> Get(Guid taskId)
-        {
-            var eval = await _db.Evaluations
-                .Include(e => e.Evaluator)
-                .FirstOrDefaultAsync(e => e.TaskId == taskId);
-
-            return eval == null ? NotFound() : Ok(eval);
-        }
-
-        // PUT: api/tasks/{taskId}/evaluations
-        [HttpPut]
+        // --------------------------------------------------------------------
+        // Delete evaluation
+        // --------------------------------------------------------------------
+        [HttpDelete("{taskId:guid}")]  // ✅ Unique: /api/evaluations/{taskId} (DELETE)
         [Authorize(Roles = "Evaluator")]
-        public async Task<IActionResult> Update(Guid taskId, [FromBody] EvalDto dto)
+        public async Task<IActionResult> DeleteEvaluation(Guid taskId)
         {
-            var evaluatorId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            if (dto.EvaluatorId != evaluatorId)
-                return BadRequest("Can only update evaluation as yourself.");
-
-            var eval = await _db.Evaluations.FirstOrDefaultAsync(e => e.TaskId == taskId);
-            if (eval == null) return NotFound("Evaluation not found.");
-
-            eval.Status = dto.Status;
-            eval.Comments = dto.Comments;
-            eval.EvaluatedAt = DateTime.UtcNow;
-
-            var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == taskId);
-            if (task != null)
-            {
-                ApplyEvaluationToTask(task, eval.Status);
-            }
-
-            _db.TaskHistories.Add(new TaskHistory
-            {
-                TaskId = taskId,
-                Action = $"Evaluation updated to {eval.Status}",
-                Comments = eval.Comments,
-                PerformedById = evaluatorId,
-                PerformedAt = DateTime.UtcNow
-            });
-
-            await _db.SaveChangesAsync();
-            return Ok(eval);
+            await _service.DeleteEvaluation(taskId);
+            return Ok(new { message = "Evaluation deleted." });
         }
 
-        // DELETE: api/tasks/{taskId}/evaluations
-        [HttpDelete]
+        // --------------------------------------------------------------------
+        // Get all submitted tasks for evaluator
+        // --------------------------------------------------------------------
+        [HttpGet("pending")]  // ✅ Unique: /api/evaluations/pending
         [Authorize(Roles = "Evaluator")]
-        public async Task<IActionResult> Delete(Guid taskId)
-        {
-            var evaluatorId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-            var eval = await _db.Evaluations.FirstOrDefaultAsync(e => e.TaskId == taskId);
-            if (eval == null)
-                return NotFound("Evaluation not found.");
-
-            // Optional: only allow the evaluator who created it to delete
-            if (eval.EvaluatorId != evaluatorId)
-                return Forbid("You can only delete your own evaluations.");
-
-            _db.Evaluations.Remove(eval);
-
-            // Add history log
-            _db.TaskHistories.Add(new TaskHistory
-            {
-                TaskId = taskId,
-                Action = "Evaluation deleted",
-                Comments = null,
-                PerformedById = evaluatorId,
-                PerformedAt = DateTime.UtcNow
-            });
-
-            await _db.SaveChangesAsync();
-            return NoContent(); // 204 response
-        }
-
-        [Authorize(Roles = "Evaluator")]
-        [HttpGet("pending-tasks")]
         public async Task<IActionResult> GetPendingTasks()
         {
-            var tasks = await _db.Tasks
-                .Include(t => t.AssignedTo)
-                .Where(t => t.Status == TaskStatus.Submitted) // or whatever you use
-                .ToListAsync();
-
+            var tasks = await _service.GetPendingTasks();
             return Ok(tasks);
         }
-
-        // ✅ Fixed helper: map EvaluationStatus -> TaskStatus correctly
-        private void ApplyEvaluationToTask(TaskItem task, EvaluationStatus status)
-        {
-            switch (status)
-            {
-                case EvaluationStatus.Approved:
-                    task.Status = TaskStatus.Approved; // ✅ matches your enum
-                    break;
-                case EvaluationStatus.NeedsRevision:
-                    task.Status = TaskStatus.NeedsRevision; // ✅ matches your enum
-                    break;
-                case EvaluationStatus.Rejected:
-                    task.Status = TaskStatus.Rejected; // ✅ matches your enum
-                    break;
-                case EvaluationStatus.Pending:
-                default:
-                    task.Status = TaskStatus.InProgress; // fallback
-                    break;
-            }
-        }
     }
-
-    public record EvalDto(Guid EvaluatorId, EvaluationStatus Status, string Comments);
 }

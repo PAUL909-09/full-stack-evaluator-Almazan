@@ -6,8 +6,12 @@ import api from "@/api/axios";
  * Fetch all tasks for a project
  */
 export async function getTasksByProject(projectId) {
-  const { data } = await api.get(`/tasks/project/${projectId}`);
-  return data;
+  try {
+    const { data } = await api.get(`/tasks/project/${projectId}`);
+    return data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to get tasks by project");
+  }
 }
 
 /**

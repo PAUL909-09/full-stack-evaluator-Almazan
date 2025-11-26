@@ -1,17 +1,26 @@
 import api from "@/api/axios";
 
-/** Get all employees assigned to a project */
 export async function getAssignmentsByProject(projectId) {
-  const { data } = await api.get(`/projectassignments/project/${projectId}`);
-  return data; // [{ id, userId, name, email }]
+  try {
+    const { data } = await api.get(`/projectassignments/project/${projectId}`);
+    return data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to get assignments");
+  }
 }
 
-/** Assign one or more employees to a project */
 export async function assignEmployees(projectId, userIds) {
-  await api.post("/projectassignments", { projectId, userIds });
+  try {
+    await api.post("/projectassignments", { projectId, userIds });
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to assign employees");
+  }
 }
 
-/** Remove an employee from a project */
 export async function removeAssignment(assignmentId) {
-  await api.delete(`/projectassignments/${assignmentId}`);
+  try {
+    await api.delete(`/projectassignments/${assignmentId}`);
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to remove assignment");
+  }
 }

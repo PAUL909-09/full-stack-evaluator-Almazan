@@ -5,6 +5,8 @@ using task_manager_api.Data;
 using task_manager_api.Models;
 using System.Security.Claims;
 using task_manager_api.Dtos;
+using System.IO;  // For file handling
+using Microsoft.AspNetCore.Http;  // For IFormFile
 
 // ✅ Fix ambiguity between System.Threading.Tasks.TaskStatus and our enum
 using TaskStatus = task_manager_api.Models.TaskStatus;
@@ -17,7 +19,13 @@ namespace task_manager_api.Controllers
     public class EmployeesController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
-        public EmployeesController(ApplicationDbContext db) => _db = db;
+        private readonly IWebHostEnvironment _env;  // For file paths
+
+        public EmployeesController(ApplicationDbContext db, IWebHostEnvironment env)
+        {
+            _db = db;
+            _env = env;
+        }
 
         // GET: api/employees/tasks - Fetch tasks assigned to the current employee
         [HttpGet("tasks")]
@@ -51,8 +59,9 @@ namespace task_manager_api.Controllers
         }
 
         // PUT: api/employees/tasks/{id}/status - Update status of a task assigned to the current employee
+        // ✅ UPDATED: Now accepts file upload for submission proof
         [HttpPut("tasks/{id}/status")]
-        public async Task<IActionResult> UpdateMyTaskStatus(Guid id, [FromBody] TaskStatusDto dto)
+        public async Task<IActionResult> UpdateMyTaskStatus(Guid id, [FromForm] TaskStatusUpdateDto dto)
         {
             // Extract current user ID from JWT token
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
@@ -67,6 +76,37 @@ namespace task_manager_api.Controllers
             if (task.AssignedToId != currentUserId)
                 return Forbid("You can only update tasks assigned to you.");
 
+            // Validate file if status is "Submitted"
+            if (dto.Status == TaskStatus.Submitted)
+            {
+                if (dto.ProofFile == null || dto.ProofFile.Length == 0)
+                    return BadRequest("Proof file is required when submitting a task.");
+
+                // Validate file type and size
+                var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
+                var fileExtension = Path.GetExtension(dto.ProofFile.FileName).ToLower();
+                if (!allowedExtensions.Contains(fileExtension))
+                    return BadRequest("Only PDF and image files (JPG, PNG) are allowed.");
+
+                if (dto.ProofFile.Length > 5 * 1024 * 1024)  // 5MB limit
+                    return BadRequest("File size must be less than 5MB.");
+
+                // Save the file
+                var uploadsDir = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads", "tasks");
+                Directory.CreateDirectory(uploadsDir);  // Ensure directory exists
+                var fileName = $"{id}_{Guid.NewGuid()}{fileExtension}";
+                var filePath = Path.Combine(uploadsDir, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await dto.ProofFile.CopyToAsync(stream);
+                }
+
+                // Update task with proof and timestamp
+                task.ProofFilePath = $"/uploads/tasks/{fileName}";  // Relative path for serving
+                task.SubmittedAt = DateTime.UtcNow;
+            }
+
             // Update status
             task.Status = dto.Status;
             await _db.SaveChangesAsync();
@@ -74,7 +114,7 @@ namespace task_manager_api.Controllers
             return Ok(task);
         }
 
-        // DTO for status updates
-        public record TaskStatusDto(TaskStatus Status);
+        // ✅ UPDATED DTO: Now includes file upload
+        public record TaskStatusUpdateDto(TaskStatus Status, IFormFile? ProofFile);
     }
 }

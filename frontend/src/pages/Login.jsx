@@ -7,17 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-toastify";
 import { Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -25,7 +23,7 @@ export default function Login() {
     try {
       await authService.login(email, password);
       const user = authService.getCurrentUser();
-      toast({ title: "Login successful!", description: "Welcome back." });
+      toast.success("Login successful! Welcome back.");
       setTimeout(() => {
         if (user?.role === "Admin") navigate("/admin/dashboard");
         else if (user?.role === "Evaluator") navigate("/evaluator/dashboard");
@@ -33,11 +31,7 @@ export default function Login() {
         else navigate("/login");
       }, 400);
     } catch (err) {
-      toast({
-        title: "Login failed",
-        description: err.message || "Invalid email or password",
-        variant: "destructive",
-      });
+      toast.error("Login failed: " + (err.message || "Invalid email or password"));
     }
   };
 

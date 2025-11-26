@@ -44,5 +44,8 @@ namespace task_manager_api.Models
         public List<Comment> Comments { get; set; } = new();
         public Evaluation? Evaluation { get; set; }  // One-to-one
         public ICollection<TaskHistory> History { get; set; } = new List<TaskHistory>(); // One-to-many
+
+        public DateTime? SubmittedAt { get; set; }  // Nullable, set only on submission
+        public string? ProofFilePath { get; set; }   // Path to the uploaded file   
     }
 }

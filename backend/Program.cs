@@ -72,6 +72,7 @@ builder.Services.AddScoped<IProjectService, ProjectService>();
 builder.Services.AddScoped<ITaskService, TaskService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IProjectAssignmentService, ProjectAssignmentService>();
+builder.Services.AddScoped<IEvaluationService, EvaluationService>();
 
 
 // ===== JWT Auth =====
@@ -111,7 +112,8 @@ app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskManager API v1"));
 
 app.UseCors("AllowReactApp");
-
+app.UseCors();
+app.UseStaticFiles(); 
 //TEMPORARY: Disable Auth for Testing (Optional)
 app.UseAuthentication();
 app.UseAuthorization();

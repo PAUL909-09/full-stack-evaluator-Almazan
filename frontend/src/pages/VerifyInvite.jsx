@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-toastify";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function VerifyInvite() {
@@ -16,7 +16,6 @@ export default function VerifyInvite() {
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,17 +27,10 @@ export default function VerifyInvite() {
     e.preventDefault();
     try {
       await authService.verifyInvite({ email, otp, password });
-      toast({
-        title: "Account Verified!",
-        description: "Your password is set. You can now log in.",
-      });
+      toast.success("Account Verified! Your password is set. You can now log in.");
       navigate("/login");
     } catch (err) {
-      toast({
-        title: "Verification Failed",
-        description: err.message || "Invalid OTP or expired link.",
-        variant: "destructive",
-      });
+      toast.error("Verification Failed: " + (err.message || "Invalid OTP or expired link."));
     }
   };
 

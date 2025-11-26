@@ -1,16 +1,15 @@
 import React, { useState } from "react";
+import { toast } from "react-toastify";
 import api from "@/api/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function CreateProject() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const { toast } = useToast();
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 
@@ -32,10 +31,7 @@ export default function CreateProject() {
 
       console.log("Project created successfully:", response.data); // ✅ Log success response
 
-      toast({
-        title: "Project Created",
-        description: `Project "${name}" was successfully created.`,
-      });
+      toast.success(`Project "${name}" was successfully created.`);
 
       navigate("/evaluator/dashboard");
     } catch (err) {
@@ -46,13 +42,10 @@ export default function CreateProject() {
       console.error("Data:", err.response?.data);
       console.error("Config:", err.config);
 
-      toast({
-        title: "Error",
-        description:
-          err.response?.data?.message ||
-          "Something went wrong while creating the project.",
-        variant: "destructive",
-      });
+      toast.error(
+        err.response?.data?.message ||
+          "Something went wrong while creating the project."
+      );
     }
   };
 

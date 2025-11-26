@@ -3,12 +3,11 @@ import DataTable from "@/components/table/DataTable";
 import ProjectEmployees from "./ProjectEmployees";
 import { Button } from "@/components/ui/button";
 import { getUserProjects } from "@/services/projectService"; // Changed to named import for the specific function
-import { useToast } from "@/hooks/use-toast"; 
+import { toast } from "react-toastify";
 
 export default function UserProjects({ userId }) {
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
-  const { toast } = useToast(); // Added for error toasting
 
   useEffect(() => {
     async function fetchProjects() {
@@ -18,15 +17,11 @@ export default function UserProjects({ userId }) {
       } catch (error) {
         console.error("Error fetching projects:", error);
         // Optional: Show a toast notification to the user
-        toast({
-          title: "Error",
-          description: "Failed to load projects. Please try again.",
-          variant: "destructive", // Uses the destructive variant for errors
-        });
+        toast.error("Error: Failed to load projects. Please try again.");
       }
     }
     if (userId) fetchProjects();
-  }, [userId, toast]); // Added 'toast' to the dependency array
+  }, [userId]);
 
   const columns = [
     { key: "name", label: "Project Name" },

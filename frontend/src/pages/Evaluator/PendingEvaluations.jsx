@@ -1,12 +1,13 @@
-// frontend/src/pages/Evaluator/TaskList.jsx
+// frontend/src/pages/Evaluator/PendingEvaluations.jsx
 import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { tasksService } from "@/services/tasksService";
+import { useNavigate } from "react-router-dom";
+import evaluationService from "@/services/evaluationService";
 import { authService } from "@/services/authService";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Badge from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import ConfirmModal from "@/components/ConfirmModal";
+import { toast } from "react-toastify";
 
 const statusColors = {
   Todo: "bg-gray-500",
@@ -18,181 +19,255 @@ const statusColors = {
   Rejected: "bg-red-600",
 };
 
-export default function TaskList() {
-  const { projectId } = useParams(); // <-- will be undefined on /evaluator/tasks
+const evaluationStatuses = ["Approved", "NeedsRevision", "Rejected"];
+
+export default function PendingEvaluations() {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const user = authService.getCurrentUser();
-
   const [tasks, setTasks] = useState([]);
+  const [evaluations, setEvaluations] = useState({});
   const [loading, setLoading] = useState(true);
+  const [evaluationsLoading, setEvaluationsLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [selectedEval, setSelectedEval] = useState(null);
+  const apiBase = import.meta.env.VITE_API_URL.replace("/api", ""); // Remove /api
 
-  // -----------------------------------------------------------------
-  // Load tasks – if projectId exists → per-project, else → all evaluator tasks
-  // -----------------------------------------------------------------
+  // Load Pending Tasks
   useEffect(() => {
-    (async () => {
+    const loadPendingTasks = async () => {
       try {
-        const data = projectId
-          ? await tasksService.getTasksByProject(projectId)
-          : (await tasksService.getAllEvaluatorTasks?.()) ?? []; // fallback if you add a service later
+        const data = await evaluationService.getPendingTasks();
         setTasks(data);
-      } catch {
-        toast({
-          title: "Error",
-          description: "Failed to load tasks",
-          variant: "destructive",
-        });
+        await loadEvaluations(data);
+      } catch (error) {
+        toast.error(error.message || "Failed to load pending tasks");
       } finally {
         setLoading(false);
       }
-    })();
-  }, [projectId, toast]);
+    };
+    loadPendingTasks();
+  }, []);
 
-  const updateStatus = async (taskId, newStatus) => {
+  // Load evaluations for all tasks
+  const loadEvaluations = async (taskList) => {
+    setEvaluationsLoading(true);
     try {
-      const updated = await tasksService.updateTaskStatus(taskId, newStatus);
-      setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
-      toast({ title: "Status updated", description: `→ ${newStatus}` });
-    } catch (err) {
-      toast({
-        title: "Failed",
-        description: err.response?.data?.message || "Update error",
-        variant: "destructive",
+      const evaluationPromises = taskList.map(async (task) => {
+        try {
+          const evalData = await evaluationService.getEvaluation(task.id);
+          return { taskId: task.id, evaluation: evalData };
+        } catch (err) {
+          if (err.response?.status === 404)
+            return { taskId: task.id, evaluation: null };
+          throw err;
+        }
       });
+      const results = await Promise.all(evaluationPromises);
+      const evalMap = {};
+      results.forEach(({ taskId, evaluation }) => {
+        evalMap[taskId] = evaluation;
+      });
+      setEvaluations(evalMap);
+    } catch (error) {
+      toast.error("Failed to load some evaluations");
+    } finally {
+      setEvaluationsLoading(false);
     }
   };
 
-  if (loading) return <div className="p-8">Loading tasks…</div>;
+  const handleEvaluateClick = (taskId) => {
+    const existingEval = evaluations[taskId];
+    setSelectedEval({
+      taskId,
+      status: existingEval?.status || "Approved",
+      comments: existingEval?.comments || "",
+      isUpdate: !!existingEval,
+    });
+    setConfirmOpen(true);
+  };
+
+  const handleConfirm = async () => {
+    const { taskId, status, comments, isUpdate } = selectedEval;
+    try {
+      const data = { status, comments };
+      if (isUpdate) {
+        await evaluationService.updateEvaluation(taskId, data);
+        toast.success("Evaluation updated successfully!");
+      } else {
+        await evaluationService.createEvaluation({ taskId, ...data });
+        toast.success("Evaluation submitted successfully!");
+      }
+      setConfirmOpen(false);
+      setLoading(true);
+      const dataTasks = await evaluationService.getPendingTasks();
+      setTasks(dataTasks);
+      await loadEvaluations(dataTasks);
+      setLoading(false);
+    } catch (error) {
+      toast.error(error.message || "Failed to submit evaluation");
+    }
+  };
+
+  if (loading || evaluationsLoading) {
+    return <div className="p-8">Loading evaluations…</div>;
+  }
 
   return (
     <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">
-          {projectId ? "Project Tasks" : "All My Tasks"}
-        </h1>
+        <h1 className="text-2xl font-bold">Evaluations</h1>
         <Button onClick={() => navigate(-1)} variant="outline">
           ← Back
         </Button>
       </div>
 
+      {/* No tasks */}
       {tasks.length === 0 ? (
-        <p className="text-gray-500">
-          {projectId
-            ? "No tasks in this project yet. Assign employees first."
-            : "You have no tasks yet."}
-        </p>
+        <p className="text-gray-500">No tasks requiring evaluation.</p>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {tasks.map((task) => (
-            <Card key={task.id} className="shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg">{task.title}</CardTitle>
-                <Badge className={`${statusColors[task.status]} text-white`}>
-                  {task.status}
-                </Badge>
-              </CardHeader>
+          {tasks.map((task) => {
+            const evaluation = evaluations[task.id];
+            return (
+              <Card key={task.id} className="shadow-md">
+                <CardHeader>
+                  <CardTitle className="text-lg">{task.title}</CardTitle>
+                  <Badge className={`${statusColors[task.status]} text-white`}>
+                    {task.status}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <p className="text-sm text-gray-600">{task.description}</p>
+                  <p className="text-xs">
+                    Assigned to: <strong>{task.assignedTo?.name}</strong>
+                  </p>
 
-              <CardContent className="space-y-3">
-                <p className="text-sm text-gray-600">{task.description}</p>
-                <p className="text-xs">
-                  Assigned to: <strong>{task.assignedTo?.name}</strong>
-                </p>
+                  {/* ✅ NEW: Proof File and Submission Details */}
+                  {task.proofFilePath ? (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Proof File:</p>
+                    
+                      {/* <a
+                        href={`http://localhost:5000${task.proofFilePath}`} // ✅ Use root URL for static files
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 underline text-sm"
+                      >
+                        View/Download Proof
+                      </a> */}
+                      <a
+                        href={`${apiBase}${task.proofFilePath}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 underline text-sm"
+                      >
+                        View/Download Proof
+                      </a>
+                      {task.submittedAt && (
+                        <p className="text-xs text-gray-500">
+                          Submitted on:{" "}
+                          {new Date(task.submittedAt).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">
+                      No proof file submitted.
+                    </p>
+                  )}
 
-                {/* ---------- STATUS BUTTONS (role-aware) ---------- */}
-                <div className="flex flex-wrap gap-2">
-                  {/* Employee flow */}
-                  {user.role === "Employee" &&
-                    task.assignedToId === user.id && (
-                      <>
-                        {task.status === "Todo" && (
-                          <Button
-                            size="sm"
-                            onClick={() => updateStatus(task.id, "InProgress")}
-                          >
-                            Start
-                          </Button>
-                        )}
-                        {task.status === "InProgress" && (
-                          <Button
-                            size="sm"
-                            onClick={() => updateStatus(task.id, "Done")}
-                          >
-                            Finish
-                          </Button>
-                        )}
-                        {task.status === "Done" && (
-                          <Button
-                            size="sm"
-                            onClick={() => updateStatus(task.id, "Submitted")}
-                          >
-                            Submit
-                          </Button>
-                        )}
-                      </>
-                    )}
-
-                  {/* Evaluator review */}
-                  {user.role === "Evaluator" &&
-                    [
-                      "Submitted",
-                      "NeedsRevision",
-                      "Approved",
-                      "Rejected",
-                    ].includes(task.status) && (
-                      <>
-                        {task.status === "Submitted" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateStatus(task.id, "Approved")}
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() =>
-                                updateStatus(task.id, "NeedsRevision")
-                              }
-                            >
-                              Revise
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => updateStatus(task.id, "Rejected")}
-                            >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                      </>
-                    )}
-                </div>
-
-                {/* ---------- HISTORY PREVIEW ---------- */}
-                {task.history?.length > 0 && (
-                  <details className="text-xs mt-2">
-                    <summary className="cursor-pointer font-medium">
-                      History
-                    </summary>
-                    <ul className="mt-1 space-y-1">
-                      {task.history.map((h, i) => (
-                        <li key={i}>
-                          <strong>{h.action}</strong> by {h.performedBy?.name} @{" "}
-                          {new Date(h.performedAt).toLocaleString()}
-                        </li>
-                      ))}
-                    </ul>
-                  </details>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                  {/* Evaluation Section */}
+                  {evaluation ? (
+                    <div className="space-y-2">
+                      <p className="text-sm">
+                        <strong>Evaluation Status:</strong>{" "}
+                        <Badge
+                          className={`${
+                            statusColors[evaluation.status]
+                          } text-white`}
+                        >
+                          {evaluation.status}
+                        </Badge>
+                      </p>
+                      {evaluation.comments && (
+                        <p className="text-sm">
+                          <strong>Comments:</strong> {evaluation.comments}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500">
+                        Evaluated by: {evaluation.evaluator?.name} on{" "}
+                        {new Date(evaluation.evaluatedAt).toLocaleDateString()}
+                      </p>
+                      <Button
+                        size="sm"
+                        onClick={() => handleEvaluateClick(task.id)}
+                        className="w-full"
+                      >
+                        Update Evaluation
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => handleEvaluateClick(task.id)}
+                      className="w-full"
+                    >
+                      Evaluate
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
+
+      {/* Evaluation Modal */}
+      <ConfirmModal
+        open={confirmOpen}
+        title={
+          selectedEval?.isUpdate ? "Update Evaluation" : "Submit Evaluation"
+        }
+        message={
+          <div className="space-y-4 text-left">
+            <label className="block">
+              <span className="text-sm text-gray-700">Status:</span>
+              <select
+                value={selectedEval?.status || ""}
+                onChange={(e) =>
+                  setSelectedEval((prev) => ({
+                    ...prev,
+                    status: e.target.value,
+                  }))
+                }
+                className="w-full mt-1 border rounded-md px-3 py-2 text-sm"
+              >
+                {evaluationStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-sm text-gray-700">Comments:</span>
+              <textarea
+                rows="3"
+                value={selectedEval?.comments || ""}
+                onChange={(e) =>
+                  setSelectedEval((prev) => ({
+                    ...prev,
+                    comments: e.target.value,
+                  }))
+                }
+                className="w-full mt-1 border rounded-md px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+        }
+        onConfirm={handleConfirm}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }

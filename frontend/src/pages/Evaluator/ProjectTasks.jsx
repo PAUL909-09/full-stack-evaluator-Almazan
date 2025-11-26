@@ -1,9 +1,9 @@
 // src/pages/Evaluator/ProjectTasks.jsx
 import React, { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import { useParams, useNavigate } from "react-router-dom";
 import { tasksService } from "@/services/tasksService";
 import { authService } from "@/services/authService";
-import { useToast } from "@/hooks/use-toast";
 
 // shadcn/ui components (JSX versions)
 import {
@@ -31,7 +31,6 @@ const statusColors = {
 export default function ProjectTasks() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
   const user = authService.getCurrentUser();
 
   const [tasks, setTasks] = useState([]);
@@ -44,28 +43,20 @@ export default function ProjectTasks() {
         const data = await tasksService.getTasksByProject(projectId);
         setTasks(data);
       } catch (err) {
-        toast({
-          title: "Error",
-          description: "Failed to load tasks",
-          variant: "destructive",
-        });
+        toast.error("Failed to load tasks");
       } finally {
         setLoading(false);
       }
     })();
-  }, [projectId, toast]);
+  }, [projectId]);
 
   const updateStatus = async (taskId, newStatus) => {
     try {
       const updated = await tasksService.updateTaskStatus(taskId, newStatus);
       setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
-      toast({ title: "Success", description: `Status → ${newStatus}` });
+      toast.success(`Status → ${newStatus}`);
     } catch (err) {
-      toast({
-        title: "Failed",
-        description: err.response?.data?.message || "Update failed",
-        variant: "destructive",
-      });
+      toast.error(err.response?.data?.message || "Update failed");
     }
   };
 

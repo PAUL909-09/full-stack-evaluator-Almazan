@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import EvaluationService from "../services/EvaluatorService";
+import EvaluationService from "../services/evaluationService";
 import { toast } from "react-toastify";
 
 export function useEvaluation(taskId) {

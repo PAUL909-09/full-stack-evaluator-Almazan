@@ -1,6 +1,5 @@
 // frontend/src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
 import useAuthCheck from "@/hooks/useAuthCheck";
 
 import { Protected } from "@/components/RouteGuards";
@@ -55,7 +54,7 @@ export default function App() {
         progressClassName="custom-progress-bar" // ✅ Custom class for styling the countdown bar
       />
 
-      <Toaster />
+     
     </BrowserRouter>
   );
 }

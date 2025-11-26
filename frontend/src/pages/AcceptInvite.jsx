@@ -6,14 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "react-toastify";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function AcceptInvite() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [searchParams] = useSearchParams();
-  const { toast } = useToast();
   const navigate = useNavigate();
 
   // The token comes from the invite link emailed by the admin
@@ -23,17 +22,10 @@ export default function AcceptInvite() {
     e.preventDefault();
     try {
       await authService.acceptInvite(token, password);
-      toast({
-        title: "Account activated!",
-        description: "You can now log in with your new password.",
-      });
+      toast.success("Account activated! You can now log in with your new password.");
       navigate("/login");
     } catch (err) {
-      toast({
-        title: "Error",
-        description: err.message || "Invalid or expired invite link.",
-        variant: "destructive",
-      });
+      toast.error("Error: " + (err.message || "Invalid or expired invite link."));
     }
   };
 
