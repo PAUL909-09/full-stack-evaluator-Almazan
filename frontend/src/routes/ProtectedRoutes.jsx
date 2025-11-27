@@ -30,6 +30,7 @@ import EmployeeDashboard from "@/pages/Employee/EmployeeDashboard";
 
 // Shared pages
 import TaskDetails from "@/pages/TaskDetails";
+import EvaluationHistory from "@/pages/Evaluator/EvaluationHistory";
 
 export default function ProtectedRoutes() {
   return (
@@ -153,7 +154,15 @@ export default function ProtectedRoutes() {
             </EvaluatorOnly>
           }
         />
-      
+        <Route
+          path="/evaluator/evaluation-history"
+          element={
+            <EvaluatorOnly>
+              <EvaluationHistory />
+            </EvaluatorOnly>
+          }
+        />
+
         {/* === EMPLOYEE ROUTES === */}
         <Route
           path="/employee/dashboard"

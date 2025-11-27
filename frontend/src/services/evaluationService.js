@@ -26,6 +26,12 @@ class EvaluationService {
     const response = await api.get(`/evaluations/pending`);
     return response.data;
   }
+
+  async getMyEvaluationHistory() {
+    const response = await api.get(`/evaluations/my-history`);
+    return response.data;
+  }
+  
 }
 
 export default new EvaluationService();

@@ -29,7 +29,6 @@ export default function PendingEvaluations() {
   const [evaluationsLoading, setEvaluationsLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [selectedEval, setSelectedEval] = useState(null);
-  const apiBase = import.meta.env.VITE_API_URL.replace("/api", ""); // Remove /api
 
   // Load Pending Tasks
   useEffect(() => {
@@ -56,8 +55,7 @@ export default function PendingEvaluations() {
           const evalData = await evaluationService.getEvaluation(task.id);
           return { taskId: task.id, evaluation: evalData };
         } catch (err) {
-          if (err.response?.status === 404)
-            return { taskId: task.id, evaluation: null };
+          if (err.response?.status === 404) return { taskId: task.id, evaluation: null };
           throw err;
         }
       });
@@ -142,21 +140,12 @@ export default function PendingEvaluations() {
                     Assigned to: <strong>{task.assignedTo?.name}</strong>
                   </p>
 
-                  {/* ✅ NEW: Proof File and Submission Details */}
+                  {/* Proof File and Submission Details */}
                   {task.proofFilePath ? (
                     <div className="space-y-2">
                       <p className="text-sm font-medium">Proof File:</p>
-                    
-                      {/* <a
-                        href={`http://localhost:5000${task.proofFilePath}`} // ✅ Use root URL for static files
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 underline text-sm"
-                      >
-                        View/Download Proof
-                      </a> */}
                       <a
-                        href={`${apiBase}${task.proofFilePath}`}
+                        href={`http://localhost:5000${task.proofFilePath}`}  // ✅ Fixed for static files
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-500 underline text-sm"
@@ -165,15 +154,12 @@ export default function PendingEvaluations() {
                       </a>
                       {task.submittedAt && (
                         <p className="text-xs text-gray-500">
-                          Submitted on:{" "}
-                          {new Date(task.submittedAt).toLocaleString()}
+                          Submitted on: {new Date(task.submittedAt).toLocaleString()}
                         </p>
                       )}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500">
-                      No proof file submitted.
-                    </p>
+                    <p className="text-sm text-gray-500">No proof file submitted.</p>
                   )}
 
                   {/* Evaluation Section */}
@@ -181,11 +167,7 @@ export default function PendingEvaluations() {
                     <div className="space-y-2">
                       <p className="text-sm">
                         <strong>Evaluation Status:</strong>{" "}
-                        <Badge
-                          className={`${
-                            statusColors[evaluation.status]
-                          } text-white`}
-                        >
+                        <Badge className={`${statusColors[evaluation.status]} text-white`}>
                           {evaluation.status}
                         </Badge>
                       </p>
@@ -215,6 +197,26 @@ export default function PendingEvaluations() {
                       Evaluate
                     </Button>
                   )}
+
+                  {/* ✅ NEW: History Section */}
+                  <details className="border-t bg-gray-50 px-4 py-3 text-sm">
+                    <summary className="cursor-pointer font-medium text-gray-700">
+                      History ({task.taskHistories?.length || 0} entries)
+                    </summary>
+                    <ul className="mt-2 space-y-1 text-xs text-gray-600">
+                      {task.taskHistories?.length > 0 ? (
+                        task.taskHistories.map((h, i) => (
+                          <li key={i}>
+                            <strong>{h.action}</strong> by {h.performedBy?.name || "Unknown"} @{" "}
+                            {new Date(h.performedAt).toLocaleString()}
+                            {h.comments && <span> - {h.comments}</span>}
+                          </li>
+                        ))
+                      ) : (
+                        <li>No history available.</li>
+                      )}
+                    </ul>
+                  </details>
                 </CardContent>
               </Card>
             );
@@ -225,9 +227,7 @@ export default function PendingEvaluations() {
       {/* Evaluation Modal */}
       <ConfirmModal
         open={confirmOpen}
-        title={
-          selectedEval?.isUpdate ? "Update Evaluation" : "Submit Evaluation"
-        }
+        title={selectedEval?.isUpdate ? "Update Evaluation" : "Submit Evaluation"}
         message={
           <div className="space-y-4 text-left">
             <label className="block">
@@ -235,10 +235,7 @@ export default function PendingEvaluations() {
               <select
                 value={selectedEval?.status || ""}
                 onChange={(e) =>
-                  setSelectedEval((prev) => ({
-                    ...prev,
-                    status: e.target.value,
-                  }))
+                  setSelectedEval((prev) => ({ ...prev, status: e.target.value }))
                 }
                 className="w-full mt-1 border rounded-md px-3 py-2 text-sm"
               >
@@ -255,10 +252,7 @@ export default function PendingEvaluations() {
                 rows="3"
                 value={selectedEval?.comments || ""}
                 onChange={(e) =>
-                  setSelectedEval((prev) => ({
-                    ...prev,
-                    comments: e.target.value,
-                  }))
+                  setSelectedEval((prev) => ({ ...prev, comments: e.target.value }))
                 }
                 className="w-full mt-1 border rounded-md px-3 py-2 text-sm"
               />

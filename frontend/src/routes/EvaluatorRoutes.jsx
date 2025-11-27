@@ -9,7 +9,7 @@ import PendingEvaluations from "@/pages/Evaluator/PendingEvaluations";
 import AssignEmployeesToProject from "@/pages/Evaluator/AssignEmployeesToProject";
 import ManageAssignments from "@/pages/Evaluator/ManageAssignments";
 import TaskTable from "@/pages/Evaluator/TaskTable";
-
+import EvaluationHistory from "@/pages/Evaluator/EvaluationHistory";
 export default [
   <Route
     key="eval-dashboard"
@@ -75,5 +75,12 @@ export default [
       </EvaluatorOnly>
     }
   />,
- 
+  <Route
+    path="/evaluator/evaluation-history"
+    element={
+      <EvaluatorOnly>
+        <EvaluationHistory />
+      </EvaluatorOnly>
+    }
+  />,
 ];

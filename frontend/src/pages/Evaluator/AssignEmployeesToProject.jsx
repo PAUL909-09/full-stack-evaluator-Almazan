@@ -1,107 +1,107 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { toast } from "react-toastify"; // ✅ use react-toastify instead
+  import { useEffect, useState } from "react";
+  import { useParams, useNavigate } from "react-router-dom";
+  import { toast } from "react-toastify"; // ✅ use react-toastify instead
 
-import { getProjectById } from "@/services/projectService";
-import { assignEmployees } from "@/services/projectAssignmentService"; // Added import
-import { getEmployees } from "@/services/userService";
+  import { getProjectById } from "@/services/projectService";
+  import { assignEmployees } from "@/services/projectAssignmentService"; // Added import
+  import { getEmployees } from "@/services/userService";
 
 
-export default function AssignEmployeesToProject() {
-  const { projectId } = useParams();
-  const navigate = useNavigate();
+  export default function AssignEmployeesToProject() {
+    const { projectId } = useParams();
+    const navigate = useNavigate();
 
-  const [employees, setEmployees] = useState([]);
-  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState([]);
-  const [project, setProject] = useState(null);
-  const [loading, setLoading] = useState(true);
+    const [employees, setEmployees] = useState([]);
+    const [selectedEmployeeIds, setSelectedEmployeeIds] = useState([]);
+    const [project, setProject] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchData() {
+    useEffect(() => {
+      async function fetchData() {
+        try {
+          const [users, projectData] = await Promise.all([
+            getEmployees(), // service: /api/users?role=Employee
+            getProjectById(projectId),
+          ]);
+          setEmployees(users);
+          setProject(projectData);
+        } catch (err) {
+          console.error(err);
+          toast.error("Failed to load project or employee data.");
+        } finally {
+          setLoading(false);
+        }
+      }
+      fetchData();
+    }, [projectId]);
+
+    const toggleEmployee = (id) => {
+      setSelectedEmployeeIds((prev) =>
+        prev.includes(id)
+          ? prev.filter((uid) => uid !== id)
+          : [...prev, id]
+      );
+    };
+
+    const handleAssign = async () => {
+      if (selectedEmployeeIds.length === 0) {
+        toast.warn("Please select at least one employee."); // ⚠️ use warn for better UX
+        return;
+      }
+
       try {
-        const [users, projectData] = await Promise.all([
-          getEmployees(), // service: /api/users?role=Employee
-          getProjectById(projectId),
-        ]);
-        setEmployees(users);
-        setProject(projectData);
+        await assignEmployees(projectId, selectedEmployeeIds); // Fixed function name
+        toast.success("Employees assigned successfully!");
+        navigate(`/evaluator/manage-assignments/${projectId}`);
       } catch (err) {
         console.error(err);
-        toast.error("Failed to load project or employee data.");
-      } finally {
-        setLoading(false);
+        toast.error(err.response?.data || "Failed to assign employees.");
       }
-    }
-    fetchData();
-  }, [projectId]);
+    };
 
-  const toggleEmployee = (id) => {
-    setSelectedEmployeeIds((prev) =>
-      prev.includes(id)
-        ? prev.filter((uid) => uid !== id)
-        : [...prev, id]
-    );
-  };
+    if (loading)
+      return (
+        <p className="text-center text-gray-500 mt-10">Loading...</p>
+      );
 
-  const handleAssign = async () => {
-    if (selectedEmployeeIds.length === 0) {
-      toast.warn("Please select at least one employee."); // ⚠️ use warn for better UX
-      return;
-    }
-
-    try {
-      await assignEmployees(projectId, selectedEmployeeIds); // Fixed function name
-      toast.success("Employees assigned successfully!");
-      navigate(`/evaluator/manage-assignments/${projectId}`);
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data || "Failed to assign employees.");
-    }
-  };
-
-  if (loading)
     return (
-      <p className="text-center text-gray-500 mt-10">Loading...</p>
-    );
+      <div className="max-w-2xl mx-auto mt-10 bg-white shadow-md rounded-2xl p-6">
+        <h2 className="text-2xl font-bold mb-4">
+          Assign Employees to Project
+        </h2>
+        <p className="text-gray-600 mb-6">
+          Project: <strong>{project?.name}</strong>
+        </p>
 
-  return (
-    <div className="max-w-2xl mx-auto mt-10 bg-white shadow-md rounded-2xl p-6">
-      <h2 className="text-2xl font-bold mb-4">
-        Assign Employees to Project
-      </h2>
-      <p className="text-gray-600 mb-6">
-        Project: <strong>{project?.name}</strong>
-      </p>
+        <div className="space-y-3 mb-6">
+          {employees.length === 0 ? (
+            <p>No employees available.</p>
+          ) : (
+            employees.map((emp) => (
+              <label
+                key={emp.id}
+                className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-gray-50 cursor-pointer"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedEmployeeIds.includes(emp.id)}
+                  onChange={() => toggleEmployee(emp.id)}
+                />
+                <span>
+                  {emp.name}{" "}
+                  <small className="text-gray-500">({emp.email})</small>
+                </span>
+              </label>
+            ))
+          )}
+        </div>
 
-      <div className="space-y-3 mb-6">
-        {employees.length === 0 ? (
-          <p>No employees available.</p>
-        ) : (
-          employees.map((emp) => (
-            <label
-              key={emp.id}
-              className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-gray-50 cursor-pointer"
-            >
-              <input
-                type="checkbox"
-                checked={selectedEmployeeIds.includes(emp.id)}
-                onChange={() => toggleEmployee(emp.id)}
-              />
-              <span>
-                {emp.name}{" "}
-                <small className="text-gray-500">({emp.email})</small>
-              </span>
-            </label>
-          ))
-        )}
+        <button
+          onClick={handleAssign}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg"
+        >
+          Assign Selected Employees
+        </button>
       </div>
-
-      <button
-        onClick={handleAssign}
-        className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg"
-      >
-        Assign Selected Employees
-      </button>
-    </div>
-  );
-}
+    );
+  }

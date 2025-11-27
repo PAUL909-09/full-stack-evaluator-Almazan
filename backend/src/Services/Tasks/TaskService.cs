@@ -40,31 +40,82 @@ namespace task_manager_api.Services.Tasks
                 .Include(t => t.Project)
                 .ToListAsync();
 
+        // public async Task<IEnumerable<User>> GetEmployeesByProjectAsync(Guid projectId, Guid evaluatorId)
+        // {
+        //     var project = await _db.Projects.FindAsync(projectId);
+        //     if (project == null || project.EvaluatorId != evaluatorId)
+        //         return Enumerable.Empty<User>();
+
+        //     return await _db.Tasks
+        //         .Where(t => t.ProjectId == projectId && t.AssignedTo != null)
+        //         .Select(t => t.AssignedTo!)
+        //         .Distinct()
+        //         .ToListAsync();
+        // }
         public async Task<IEnumerable<User>> GetEmployeesByProjectAsync(Guid projectId, Guid evaluatorId)
         {
             var project = await _db.Projects.FindAsync(projectId);
             if (project == null || project.EvaluatorId != evaluatorId)
                 return Enumerable.Empty<User>();
 
-            return await _db.Tasks
-                .Where(t => t.ProjectId == projectId && t.AssignedTo != null)
-                .Select(t => t.AssignedTo!)
+            return await _db.ProjectAssignments
+                .Where(pa => pa.ProjectId == projectId)
+                .Select(pa => pa.User)
                 .Distinct()
                 .ToListAsync();
         }
 
+
+        // public async Task<TaskItem> CreateAsync(CreateTaskDto dto, Guid evaluatorId)
+        // {
+        //     var evaluator = await _db.Users.FindAsync(dto.CreatedById);
+        //     var employee = await _db.Users.FindAsync(dto.AssignedToId);
+        //     var project = await _db.Projects.FindAsync(dto.ProjectId);
+
+        //     if (evaluator == null || employee == null || project == null)
+        //         throw new ArgumentException("Invalid references.");
+        //     if (employee.Role != Role.Employee)
+        //         throw new ArgumentException("Assigned user must be an employee.");
+        //     if (project.EvaluatorId != evaluatorId)
+        //         throw new UnauthorizedAccessException("You can only create tasks for your own projects.");
+
+        //     var task = new TaskItem
+        //     {
+        //         Title = dto.Title,
+        //         Description = dto.Description,
+        //         CreatedById = evaluator.Id,
+        //         AssignedToId = employee.Id,
+        //         ProjectId = project.Id,
+        //         Status = TaskStatus.Todo
+        //     };
+
+        //     _db.Tasks.Add(task);
+        //     await _db.SaveChangesAsync();
+
+        //     await LogHistoryAsync(task.Id, "Created", null, evaluatorId);
+        //     return task;
+        // }
         public async Task<TaskItem> CreateAsync(CreateTaskDto dto, Guid evaluatorId)
         {
-            var evaluator = await _db.Users.FindAsync(dto.CreatedById);
+            var evaluator = await _db.Users.FindAsync(evaluatorId);
             var employee = await _db.Users.FindAsync(dto.AssignedToId);
             var project = await _db.Projects.FindAsync(dto.ProjectId);
 
             if (evaluator == null || employee == null || project == null)
                 throw new ArgumentException("Invalid references.");
+
             if (employee.Role != Role.Employee)
                 throw new ArgumentException("Assigned user must be an employee.");
+
             if (project.EvaluatorId != evaluatorId)
                 throw new UnauthorizedAccessException("You can only create tasks for your own projects.");
+
+            // 🔥 NEW: Validate employee belongs to the project
+            bool isAssignedToProject = await _db.ProjectAssignments
+                .AnyAsync(pa => pa.ProjectId == dto.ProjectId && pa.UserId == dto.AssignedToId);
+
+            if (!isAssignedToProject)
+                throw new ArgumentException("This employee is not assigned to the project.");
 
             var task = new TaskItem
             {
@@ -82,6 +133,7 @@ namespace task_manager_api.Services.Tasks
             await LogHistoryAsync(task.Id, "Created", null, evaluatorId);
             return task;
         }
+
 
         public async Task<TaskItem?> UpdateStatusAsync(Guid id, TaskStatus newStatus, Guid userId, string role)
         {

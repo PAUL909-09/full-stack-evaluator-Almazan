@@ -108,14 +108,14 @@
 // }
 // frontend/src/pages/Evaluator/EvaluatorDashboard.jsx
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";  // For navigation
+import { useNavigate } from "react-router-dom"; // For navigation
 import api from "@/api/axios";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";  // For the new button
+import { Button } from "@/components/ui/button"; // For the new button
 import { toast } from "react-toastify";
 
 export default function EvaluatorDashboard() {
-  const navigate = useNavigate();  // For navigating to TaskReviews
+  const navigate = useNavigate(); // For navigating to TaskReviews
   const [stats, setStats] = useState({
     totalTasks: 0,
     pendingEvaluations: 0,
@@ -139,7 +139,7 @@ export default function EvaluatorDashboard() {
       const evaluations = {};
       for (const task of tasks) {
         try {
-          const evalRes = await api.get(`/evaluations/${task.id}`);  // Updated to match your backend route
+          const evalRes = await api.get(`/evaluations/${task.id}`); // Updated to match your backend route
           evaluations[task.id] = evalRes.data;
         } catch {
           // Ignore if no evaluation
@@ -148,12 +148,26 @@ export default function EvaluatorDashboard() {
 
       // Compute stats
       const totalTasks = tasks.length;
-      const pendingEvaluations = tasks.filter((t) => t.status === "Submitted").length;
-      const approved = Object.values(evaluations).filter((e) => e?.status === "Approved").length;
-      const needsRevision = Object.values(evaluations).filter((e) => e?.status === "NeedsRevision").length;
-      const rejected = Object.values(evaluations).filter((e) => e?.status === "Rejected").length;
+      const pendingEvaluations = tasks.filter(
+        (t) => t.status === "Submitted"
+      ).length;
+      const approved = Object.values(evaluations).filter(
+        (e) => e?.status === "Approved"
+      ).length;
+      const needsRevision = Object.values(evaluations).filter(
+        (e) => e?.status === "NeedsRevision"
+      ).length;
+      const rejected = Object.values(evaluations).filter(
+        (e) => e?.status === "Rejected"
+      ).length;
 
-      setStats({ totalTasks, pendingEvaluations, approved, needsRevision, rejected });
+      setStats({
+        totalTasks,
+        pendingEvaluations,
+        approved,
+        needsRevision,
+        rejected,
+      });
     } catch (err) {
       toast.error("Failed to load stats: " + err.message);
     } finally {
@@ -166,8 +180,13 @@ export default function EvaluatorDashboard() {
   return (
     <div className="p-8 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-4xl font-bold text-gray-800">Evaluator Dashboard</h1>
-        <Button onClick={() => navigate("/evaluator/task-reviews")} variant="outline">
+        <h1 className="text-4xl font-bold text-gray-800">
+          Evaluator Dashboard
+        </h1>
+        <Button
+          onClick={() => navigate("/evaluator/task-reviews")}
+          variant="outline"
+        >
           View Task Reviews
         </Button>
       </div>
@@ -187,7 +206,9 @@ export default function EvaluatorDashboard() {
             <CardTitle>Pending Evaluations</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-blue-600">{stats.pendingEvaluations}</p>
+            <p className="text-2xl font-bold text-blue-600">
+              {stats.pendingEvaluations}
+            </p>
           </CardContent>
         </Card>
 
@@ -196,7 +217,9 @@ export default function EvaluatorDashboard() {
             <CardTitle>Approved</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
+            <p className="text-2xl font-bold text-green-600">
+              {stats.approved}
+            </p>
           </CardContent>
         </Card>
 
@@ -205,7 +228,9 @@ export default function EvaluatorDashboard() {
             <CardTitle>Needs Revision</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-orange-600">{stats.needsRevision}</p>
+            <p className="text-2xl font-bold text-orange-600">
+              {stats.needsRevision}
+            </p>
           </CardContent>
         </Card>
 
@@ -218,6 +243,13 @@ export default function EvaluatorDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <Button
+        onClick={() => navigate("/evaluator/evaluation-history")}
+        variant="outline"
+      >
+        View Evaluation History
+      </Button>
 
       {/* Add more sections here, e.g., recent evaluations or charts */}
     </div>

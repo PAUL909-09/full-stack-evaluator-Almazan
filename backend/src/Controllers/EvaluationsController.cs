@@ -90,5 +90,16 @@ namespace task_manager_api.Controllers
             var tasks = await _service.GetPendingTasks();
             return Ok(tasks);
         }
+
+        // GET api/evaluations/my-history
+        [HttpGet("my-history")]
+        [Authorize]
+        public async Task<IActionResult> GetMyHistory()
+        {
+            var userId = Guid.Parse(User.FindFirst("id")!.Value);
+            var history = await _service.GetEvaluationHistoryByEvaluator(userId)!;
+            return Ok(history);
+        }
+
     }
 }

@@ -48,6 +48,7 @@ const baseMenu = {
     //   icon: Users,
     //   label: "Manage Assignments",
     // },
+    { to: "/evaluator/evaluation-history", icon: BarChart, label: "My Evaluations" },
   ],
   Employee: [{ to: "/employee/dashboard", icon: Home, label: "My Tasks" }],
 };

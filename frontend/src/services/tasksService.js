@@ -22,6 +22,11 @@ export async function getEmployeesByProject(projectId) {
   const { data } = await api.get(`/tasks/project/${projectId}/employees`);
   return data;
 }
+// export async function getEmployeesByProject(projectId) {
+//   const { data } = await api.get(`/projectassignments/project/${projectId}`);
+//   return data.map(a => a.user); // depends on backend shape
+// }
+
 
 /**
  * GET /tasks/{id}

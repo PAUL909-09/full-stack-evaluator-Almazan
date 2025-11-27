@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using task_manager_api.Data;
 using task_manager_api.Models;
 using TaskStatus = task_manager_api.Models.TaskStatus;
+using task_manager_api.DTOs.Evaluation;
 
 namespace task_manager_api.Services
 {
@@ -94,9 +95,41 @@ namespace task_manager_api.Services
         {
             return await _db.Tasks
                 .Include(t => t.AssignedTo)
-                .Where(t => t.Status == TaskStatus.Submitted && !_db.Evaluations.Any(e => e.TaskId == t.Id))  // ✅ Exclude tasks with evaluations
+                .Include(t => t.History)
+                    .ThenInclude(h => h.PerformedBy)
+                .Where(t => t.Status == TaskStatus.Submitted
+                    && !_db.Evaluations.Any(e => e.TaskId == t.Id))
                 .ToListAsync();
         }
+        public async Task<IEnumerable<EvaluationHistoryDto>> GetEvaluationHistoryByEvaluator(Guid evaluatorId)
+        {
+            var history = await _db.Evaluations
+                .Where(e => e.EvaluatorId == evaluatorId)
+                .OrderByDescending(e => e.EvaluatedAt)
+                .Select(e => new EvaluationHistoryDto
+                {
+                    EvaluationId = e.Id,
+                    TaskId = e.TaskId,
+                    TaskTitle = e.Task.Title ?? "Untitled Task",
+                    TaskDescription = e.Task.Description ?? "No description provided",
+                    Status = e.Status.ToString(),
+                    Comments = e.Comments ?? "(No comments)",
+                    EvaluatedAt = e.EvaluatedAt,
+                    EvaluatorName = e.Evaluator.Name ?? "Unknown Evaluator"
+                })
+                .ToListAsync();
+
+            // DEBUG: Remove this in production — but keep for exam!
+            if (!history.Any())
+            {
+                // This helps you SEE if the query is working
+                Console.WriteLine($"[DEBUG] No evaluations found for evaluator ID: {evaluatorId}");
+            }
+
+            return history;
+        }
+
+
 
         private void ApplyEvaluationToTask(TaskItem task, EvaluationStatus status)
         {
@@ -108,6 +141,11 @@ namespace task_manager_api.Services
                 EvaluationStatus.Pending => TaskStatus.Submitted,
                 _ => task.Status
             };
+        }
+
+        Task<IReadOnlyList<EvaluationHistoryDto>> IEvaluationService.GetEvaluationHistoryByEvaluator(Guid evaluatorId)
+        {
+            throw new NotImplementedException();
         }
     }
 }
