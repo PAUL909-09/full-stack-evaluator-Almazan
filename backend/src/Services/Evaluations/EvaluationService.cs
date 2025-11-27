@@ -1,12 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using task_manager_api.Data;
+using task_manager_api.DTOs.Evaluation;
 using task_manager_api.Models;
 using TaskStatus = task_manager_api.Models.TaskStatus;
-using task_manager_api.DTOs.Evaluation;
 
 namespace task_manager_api.Services
 {
@@ -23,48 +19,45 @@ namespace task_manager_api.Services
         {
             return await _db.Evaluations
                 .Include(e => e.Evaluator)
+                .Include(e => e.Task)
                 .FirstOrDefaultAsync(e => e.TaskId == taskId);
         }
 
-        public async Task CreateEvaluation(Evaluation evaluation)
+        // NEW: Smart upsert — creates OR updates evaluation (prevents duplicates)
+        public async Task UpsertEvaluation(Evaluation evaluation)
         {
-            var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == evaluation.TaskId);
-            if (task == null) throw new ArgumentException("Task not found.");
+            var existing = await _db.Evaluations
+                .FirstOrDefaultAsync(e => e.TaskId == evaluation.TaskId);
 
-            ApplyEvaluationToTask(task, evaluation.Status);
-            _db.Evaluations.Add(evaluation);
-
-            _db.TaskHistories.Add(new TaskHistory
+            if (existing != null)
             {
-                TaskId = evaluation.TaskId,
-                Action = $"Evaluation set to {evaluation.Status}",
-                Comments = evaluation.Comments,
-                PerformedById = evaluation.EvaluatorId,
-                PerformedAt = DateTime.UtcNow
-            });
+                // UPDATE existing evaluation
+                existing.Status = evaluation.Status;
+                existing.Comments = evaluation.Comments;
+                existing.EvaluatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                // CREATE new evaluation
+                evaluation.EvaluatedAt = DateTime.UtcNow;
+                _db.Evaluations.Add(evaluation);
+                existing = evaluation; // for history log below
+            }
 
-            await _db.SaveChangesAsync();
-        }
-
-        public async Task UpdateEvaluation(Evaluation evaluation)
-        {
-            var existingEval = await _db.Evaluations.FirstOrDefaultAsync(e => e.TaskId == evaluation.TaskId);
-            if (existingEval == null) throw new ArgumentException("Evaluation not found.");
-
-            existingEval.Status = evaluation.Status;
-            existingEval.Comments = evaluation.Comments;
-            existingEval.EvaluatedAt = DateTime.UtcNow;
-
+            // Update task status based on evaluation
             var task = await _db.Tasks.FirstOrDefaultAsync(t => t.Id == evaluation.TaskId);
             if (task != null)
             {
                 ApplyEvaluationToTask(task, evaluation.Status);
             }
 
+            // Log to history
             _db.TaskHistories.Add(new TaskHistory
             {
                 TaskId = evaluation.TaskId,
-                Action = $"Evaluation updated to {evaluation.Status}",
+                Action = existing == evaluation
+                    ? $"Evaluation created: {evaluation.Status}"
+                    : $"Evaluation updated: {evaluation.Status}",
                 Comments = evaluation.Comments,
                 PerformedById = evaluation.EvaluatorId,
                 PerformedAt = DateTime.UtcNow
@@ -95,15 +88,21 @@ namespace task_manager_api.Services
         {
             return await _db.Tasks
                 .Include(t => t.AssignedTo)
+                .Include(t => t.Project)
                 .Include(t => t.History)
                     .ThenInclude(h => h.PerformedBy)
-                .Where(t => t.Status == TaskStatus.Submitted
-                    && !_db.Evaluations.Any(e => e.TaskId == t.Id))
+                .Where(t =>
+                    t.Status == TaskStatus.Submitted &&
+                    (t.Evaluation == null ||                                   // never evaluated
+                     !new[] { EvaluationStatus.Approved, EvaluationStatus.Rejected }
+                         .Contains(t.Evaluation.Status))                        // or not finally decided
+                )
                 .ToListAsync();
         }
+
         public async Task<IEnumerable<EvaluationHistoryDto>> GetEvaluationHistoryByEvaluator(Guid evaluatorId)
         {
-            var history = await _db.Evaluations
+            return await _db.Evaluations
                 .Where(e => e.EvaluatorId == evaluatorId)
                 .OrderByDescending(e => e.EvaluatedAt)
                 .Select(e => new EvaluationHistoryDto
@@ -111,41 +110,32 @@ namespace task_manager_api.Services
                     EvaluationId = e.Id,
                     TaskId = e.TaskId,
                     TaskTitle = e.Task.Title ?? "Untitled Task",
-                    TaskDescription = e.Task.Description ?? "No description provided",
+                    TaskDescription = e.Task.Description ?? "No description",
                     Status = e.Status.ToString(),
                     Comments = e.Comments ?? "(No comments)",
                     EvaluatedAt = e.EvaluatedAt,
-                    EvaluatorName = e.Evaluator.Name ?? "Unknown Evaluator"
+                    EvaluatorName = e.Evaluator.Name ?? "Unknown"
                 })
                 .ToListAsync();
-
-            // DEBUG: Remove this in production — but keep for exam!
-            if (!history.Any())
-            {
-                // This helps you SEE if the query is working
-                Console.WriteLine($"[DEBUG] No evaluations found for evaluator ID: {evaluatorId}");
-            }
-
-            return history;
         }
 
-
-
+        // Handles status changes + re-opening tasks on "NeedsRevision"
         private void ApplyEvaluationToTask(TaskItem task, EvaluationStatus status)
         {
             task.Status = status switch
             {
                 EvaluationStatus.Approved => TaskStatus.Approved,
-                EvaluationStatus.NeedsRevision => TaskStatus.NeedsRevision,
                 EvaluationStatus.Rejected => TaskStatus.Rejected,
-                EvaluationStatus.Pending => TaskStatus.Submitted,
+                EvaluationStatus.NeedsRevision => TaskStatus.InProgress, // ← Re-open for employee
                 _ => task.Status
             };
-        }
 
-        Task<IReadOnlyList<EvaluationHistoryDto>> IEvaluationService.GetEvaluationHistoryByEvaluator(Guid evaluatorId)
-        {
-            throw new NotImplementedException();
+            // Clear submission when sending back for revision
+            if (status == EvaluationStatus.NeedsRevision)
+            {
+                task.SubmittedAt = null;
+                task.ProofFilePath = null; // optional: let employee re-upload
+            }
         }
     }
 }

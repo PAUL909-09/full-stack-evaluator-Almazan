@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using task_manager_api.Data;
 using task_manager_api.Models;
+using task_manager_api.Services; // Add this if AdminService is in Services namespace
 
 namespace task_manager_api.Controllers
 {
@@ -12,50 +13,31 @@ namespace task_manager_api.Controllers
     public class AdminAnalyticsController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
-        public AdminAnalyticsController(ApplicationDbContext db) => _db = db;
+        private readonly AdminService _adminService;
+
+        public AdminAnalyticsController(ApplicationDbContext db, AdminService adminService)
+        {
+            _db = db;
+            _adminService = adminService;
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetAnalytics()
         {
-            // 🧍 User Distribution by Role
-            var userStats = await _db.Users
-                .GroupBy(u => u.Role)
-                .Select(g => new { role = g.Key.ToString(), count = g.Count() })
-                .ToListAsync();
+            return Ok(await _adminService.GetAdminAnalyticsAsync());
+        }
 
-            // 📊 Projects per Evaluator
-            var projectStats = await _db.Projects
-                .GroupBy(p => p.Evaluator!.Name)
-                .Select(g => new { evaluator = g.Key, projectCount = g.Count() })
-                .ToListAsync();
-
-            // ✅ Task Status Breakdown
-            var taskStats = await _db.Tasks
-                .GroupBy(t => t.Status)
-                .Select(g => new { status = g.Key.ToString(), count = g.Count() })
-                .ToListAsync();
-
-            // 🌟 Average Evaluation per Project
-            var evalStats = await _db.Evaluations
-                .Include(e => e.Task)
-                .ThenInclude(t => t.Project)
-                .GroupBy(e => e.Task!.Project!.Name)
-                .ToListAsync();
-
-            var summary = new
-            {
-                TotalUsers = await _db.Users.CountAsync(),
-                TotalProjects = await _db.Projects.CountAsync(),
-                TotalTasks = await _db.Tasks.CountAsync(),
-            };
-
-            return Ok(new
-            {
-                summary,
-                userStats,
-                projectStats,
-                taskStats,
-                evalStats
+        // You can add other methods that use _db if needed
+        [HttpGet("dashboard-stats")]
+        public async Task<IActionResult> GetDashboardStats()
+        {
+            // Example using _db
+            var totalUsers = await _db.Users.CountAsync();
+            var totalTasks = await _db.Tasks.CountAsync();
+            
+            return Ok(new { 
+                TotalUsers = totalUsers, 
+                TotalTasks = totalTasks 
             });
         }
     }

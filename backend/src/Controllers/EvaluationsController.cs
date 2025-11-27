@@ -1,13 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using task_manager_api.Controllers;
 using task_manager_api.DTOs.Evaluation;
 using task_manager_api.Models;
 using task_manager_api.Services;
 
 namespace task_manager_api.Controllers
 {
-    [Route("api/evaluations")]  // ✅ Explicit route to avoid conflicts
+    [Route("api/evaluations")]
+    [ApiController]
     public class EvaluationsController : BaseApiController
     {
         private readonly IEvaluationService _service;
@@ -18,10 +18,8 @@ namespace task_manager_api.Controllers
             _service = service;
         }
 
-        // --------------------------------------------------------------------
-        // Get evaluation for a task
-        // --------------------------------------------------------------------
-        [HttpGet("{taskId:guid}")]  // ✅ Unique: /api/evaluations/{taskId}
+        // GET: api/evaluations/{taskId}
+        [HttpGet("{taskId:guid}")]
         [Authorize]
         public async Task<IActionResult> GetEvaluation(Guid taskId)
         {
@@ -30,49 +28,30 @@ namespace task_manager_api.Controllers
             return Ok(evaluation);
         }
 
-        // --------------------------------------------------------------------
-        // Create evaluation
-        // --------------------------------------------------------------------
-        [HttpPost]  // ✅ Unique: /api/evaluations (POST)
+        // POST  api/evaluations          → first evaluation
+        // PUT   api/evaluations/{taskId} → re-evaluation (e.g. after revision)
+        [HttpPost]
+        [HttpPut("{taskId:guid?}")]
         [Authorize(Roles = "Evaluator")]
-        public async Task<IActionResult> CreateEvaluation([FromBody] EvaluationCreateDto dto)
+        public async Task<IActionResult> SaveEvaluation(Guid? taskId, [FromBody] EvaluationCreateDto dto)
         {
             var (userId, _) = GetCurrentUser();
+
             var evaluation = new Evaluation
             {
-                TaskId = dto.TaskId,
-                Status = dto.Status,
-                Comments = dto.Comments,
+                TaskId      = taskId ?? dto.TaskId,  // POST: from body, PUT: from route
                 EvaluatorId = userId,
-                EvaluatedAt = DateTime.UtcNow
+                Status      = dto.Status,
+                Comments    = dto.Comments
             };
-            await _service.CreateEvaluation(evaluation);
-            return Ok(new { message = "Evaluation created." });
+
+            await _service.UpsertEvaluation(evaluation);
+
+            return Ok(new { message = "Evaluation saved successfully." });
         }
 
-        // --------------------------------------------------------------------
-        // Update evaluation
-        // --------------------------------------------------------------------
-        [HttpPut("{taskId:guid}")]  // ✅ Unique: /api/evaluations/{taskId} (PUT)
-        [Authorize(Roles = "Evaluator")]
-        public async Task<IActionResult> UpdateEvaluation(Guid taskId, [FromBody] EvaluationUpdateDto dto)
-        {
-            var (userId, _) = GetCurrentUser();
-            var evaluation = new Evaluation
-            {
-                TaskId = taskId,
-                Status = dto.Status,
-                Comments = dto.Comments,
-                EvaluatorId = userId
-            };
-            await _service.UpdateEvaluation(evaluation);
-            return Ok(new { message = "Evaluation updated." });
-        }
-
-        // --------------------------------------------------------------------
-        // Delete evaluation
-        // --------------------------------------------------------------------
-        [HttpDelete("{taskId:guid}")]  // ✅ Unique: /api/evaluations/{taskId} (DELETE)
+        // DELETE: api/evaluations/{taskId}
+        [HttpDelete("{taskId:guid}")]
         [Authorize(Roles = "Evaluator")]
         public async Task<IActionResult> DeleteEvaluation(Guid taskId)
         {
@@ -80,10 +59,8 @@ namespace task_manager_api.Controllers
             return Ok(new { message = "Evaluation deleted." });
         }
 
-        // --------------------------------------------------------------------
-        // Get all submitted tasks for evaluator
-        // --------------------------------------------------------------------
-        [HttpGet("pending")]  // ✅ Unique: /api/evaluations/pending
+        // GET: api/evaluations/pending → tasks waiting for evaluation
+        [HttpGet("pending")]
         [Authorize(Roles = "Evaluator")]
         public async Task<IActionResult> GetPendingTasks()
         {
@@ -91,15 +68,14 @@ namespace task_manager_api.Controllers
             return Ok(tasks);
         }
 
-        // GET api/evaluations/my-history
+        // GET: api/evaluations/my-history → evaluator sees all their past evaluations
         [HttpGet("my-history")]
-        [Authorize]
+        [Authorize(Roles = "Evaluator")]
         public async Task<IActionResult> GetMyHistory()
         {
-            var userId = Guid.Parse(User.FindFirst("id")!.Value);
+            var (userId, _) = GetCurrentUser();
             var history = await _service.GetEvaluationHistoryByEvaluator(userId)!;
             return Ok(history);
         }
-
     }
 }

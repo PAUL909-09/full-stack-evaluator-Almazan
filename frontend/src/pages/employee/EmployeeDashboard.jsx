@@ -1,147 +1,100 @@
 // frontend/src/pages/Employee/EmployeeDashboard.jsx
-import React, { useEffect, useState } from "react";
-import api from "@/api/axios";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import employeeService from "@/services/employeeService";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import  Badge  from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "react-toastify";
+import { FileText, CheckCircle, AlertCircle, XCircle, Clock, BarChart3 } from "lucide-react";
 
 export default function EmployeeDashboard() {
-  const [tasks, setTasks] = useState([]);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [pendingSubmission, setPendingSubmission] = useState(null);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/employees/tasks")  // Ensure this matches your backend route
-      .then(res => setTasks(res.data))
-      .catch(err => toast.error("Error loading tasks: " + (err.message || "Try again later")));
+    employeeService.getMyStats()
+      .then(setStats)
+      .catch(() => toast.error("Failed to load dashboard stats"))
+      .finally(() => setLoading(false));
   }, []);
 
-  const updateStatus = async (id, status) => {
-    if (status === "Submitted") {
-      if (!selectedFile) {
-        setPendingSubmission(id);
-        toast.info("Please select a proof file (PDF or image) to submit.");
-        return;
-      }
-      // Additional client-side validation
-      const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
-      if (!allowedTypes.includes(selectedFile.type)) {
-        toast.error("Unsupported file type. Only PDF, JPG, or PNG allowed.");
-        return;
-      }
-      if (selectedFile.size > 5 * 1024 * 1024) {
-        toast.error("File too large. Max size is 5MB.");
-        return;
-      }
-    }
+  if (loading) return <div className="p-8 text-center">Loading your dashboard...</div>;
 
-    const formData = new FormData();
-    formData.append("status", status);
-    if (status === "Submitted" && selectedFile) {
-      formData.append("proofFile", selectedFile);
-    }
-
-    try {
-      const res = await api.put(`/employees/tasks/${id}/status`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      toast.success("Status updated successfully!");
-      setTasks(prev => prev.map(t => t.id === id ? res.data : t));
-      setSelectedFile(null);
-      setPendingSubmission(null);
-    } catch (err) {
-      console.error("Upload error:", err);  // ✅ Log full error for debugging
-      const errorMsg = err.response?.data?.message || err.message || "Upload failed";
-      toast.error("Failed: " + errorMsg);
-    }
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const allowedTypes = ["application/pdf", "image/jpeg", "image/png"];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error("Unsupported file type. Only PDF, JPG, or PNG allowed.");
-        setSelectedFile(null);
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("File too large. Max size is 5MB.");
-        setSelectedFile(null);
-        return;
-      }
-      setSelectedFile(file);
-      toast.success("File selected: " + file.name);
-    }
-  };
+  const statCards = [
+    { label: "Total Tasks", value: stats.total, icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "To Do", value: stats.todo, icon: Clock, color: "text-gray-600", bg: "bg-gray-50" },
+    { label: "In Progress", value: stats.inProgress, icon: BarChart3, color: "text-yellow-600", bg: "bg-yellow-50" },
+    { label: "Submitted", value: stats.submitted, icon: AlertCircle, color: "text-blue-600", bg: "bg-blue-50" },
+    { label: "Approved", value: stats.approved, icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { label: "Needs Revision", value: stats.needsRevision, icon: AlertCircle, color: "text-orange-600", bg: "bg-orange-50" },
+    { label: "Rejected", value: stats.rejected, icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
+  ];
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
-      <h1 className="text-4xl font-bold mb-8 text-gray-800">My Tasks</h1>
-
-      {tasks.length === 0 ? (
-        <p className="text-gray-500 text-lg">No tasks yet — enjoy the calm!</p>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {tasks.map(task => (
-            <div
-              key={task.id}
-              className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition"
-            >
-              <h3 className="text-xl font-bold text-blue-600">{task.title}</h3>
-              <p className="text-gray-600 mt-2">{task.description || "No description"}</p>
-              <div className="flex items-center gap-2 mt-4">
-                <span className="text-sm font-medium text-gray-700">Status:</span>
-                <span className={`px-3 py-1 rounded-full text-xs font-bold
-                  ${task.status === "Done" ? "bg-green-100 text-green-800" :
-                    task.status === "InProgress" ? "bg-yellow-100 text-yellow-800" :
-                    task.status === "Submitted" ? "bg-blue-100 text-blue-800" :
-                    "bg-gray-100 text-gray-800"}`}>
-                  {task.status}
-                </span>
-              </div>
-
-              {/* Show submission details if submitted */}
-              {task.submittedAt && (
-                <p className="text-sm text-gray-500 mt-2">
-                  Submitted on: {new Date(task.submittedAt).toLocaleString()}
-                </p>
-              )}
-
-              {/* File upload for submission */}
-              {pendingSubmission === task.id && (
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Upload Proof (PDF or Image):
-                  </label>
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    onChange={handleFileChange}
-                    className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                  />
-                  {selectedFile && (
-                    <p className="text-xs text-green-600 mt-1">Selected: {selectedFile.name}</p>
-                  )}
-                </div>
-              )}
-
-              <div className="flex gap-2 mt-5">
-                {["Todo", "InProgress", "Done", "Submitted"].map(s => (
-                  <Button
-                    key={s}
-                    size="sm"
-                    variant={task.status === s ? "default" : "outline"}
-                    onClick={() => updateStatus(task.id, s)}
-                    disabled={task.status === s}
-                  >
-                    {s}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          ))}
+    <div className="p-8 max-w-7xl mx-auto space-y-8">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-4xl font-bold text-gray-800">Welcome back, {user?.name?.split(" ")[0] || "Employee"}!</h1>
+          <p className="text-gray-600 mt-2">Here's your task overview</p>
         </div>
-      )}
+        <Button onClick={() => navigate("/employee/tasks")} size="lg">
+          Go to My Tasks →
+        </Button>
+      </div>
+
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+        {statCards.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={stat.label} className="hover:shadow-lg transition-shadow">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  {stat.label}
+                </CardTitle>
+                <Icon className={`w-5 h-5 ${stat.color}`} />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-3xl font-bold ${stat.color}`}>
+                  {stat.value}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6 mt-10">
+        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
+          <CardContent className="pt-6">
+            <p className="text-blue-100">Keep up the great work!</p>
+            <p className="text-3xl font-bold mt-2">{stats.approved}</p>
+            <p className="text-blue-100">Tasks approved so far</p>
+          </CardContent>
+        </Card>
+
+        {stats.needsRevision > 0 && (
+          <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white">
+            <CardContent className="pt-6">
+              <p className="text-orange-100">Action required</p>
+              <p className="text-3xl font-bold mt-2">{stats.needsRevision}</p>
+              <p className="text-orange-100">Tasks need revision</p>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
+          <CardContent className="pt-6 text-center">
+            <p className="text-2xl font-bold">You're doing great!</p>
+            <Button variant="secondary" className="mt-4" onClick={() => navigate("/employee/tasks")}>
+              View All Tasks
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

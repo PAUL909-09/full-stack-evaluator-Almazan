@@ -24,6 +24,7 @@ import PendingEvaluations from "@/pages/Evaluator/PendingEvaluations";
 import ManageAssignments from "@/pages/Evaluator/ManageAssignments";
 import TaskTable from "@/pages/Evaluator/TaskTable";
 // import TaskReviews from "@/pages/Evaluator/TaskReviews";
+import MyTasks from "@/pages/Employee/MyTasks";
 
 // Employee pages
 import EmployeeDashboard from "@/pages/Employee/EmployeeDashboard";
@@ -169,6 +170,14 @@ export default function ProtectedRoutes() {
           element={
             <EmployeeOnly>
               <EmployeeDashboard />
+            </EmployeeOnly>
+          }
+        />
+        <Route
+          path="/employee/tasks"
+          element={
+            <EmployeeOnly>
+              <MyTasks /> {/* Old interactive page moved here */}
             </EmployeeOnly>
           }
         />

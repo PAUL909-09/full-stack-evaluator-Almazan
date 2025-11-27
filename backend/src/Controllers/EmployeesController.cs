@@ -58,62 +58,65 @@ namespace task_manager_api.Controllers
             return Ok(employees);
         }
 
-        // PUT: api/employees/tasks/{id}/status - Update status of a task assigned to the current employee
-        // ✅ UPDATED: Now accepts file upload for submission proof
+        // PUT: api/employees/tasks/{id}/status
+        // PUT: api/employees/tasks/{id}/status
         [HttpPut("tasks/{id}/status")]
         public async Task<IActionResult> UpdateMyTaskStatus(Guid id, [FromForm] TaskStatusUpdateDto dto)
         {
-            // Extract current user ID from JWT token
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var currentUserId))
                 return Unauthorized("Invalid user token.");
 
-            // Find the task
-            var task = await _db.Tasks.FindAsync(id);
-            if (task == null) return NotFound("Task not found.");
+            var task = await _db.Tasks
+                .Include(t => t.Evaluation)
+                .FirstOrDefaultAsync(t => t.Id == id);
 
-            // Ensure the task is assigned to the current employee
+            if (task == null) return NotFound("Task not found.");
             if (task.AssignedToId != currentUserId)
                 return Forbid("You can only update tasks assigned to you.");
 
-            // Validate file if status is "Submitted"
-            if (dto.Status == TaskStatus.Submitted)
+            // TRUE when employee is submitting (first time OR re-submitting after revision)
+            var isSubmission = dto.Status == TaskStatus.Submitted;
+
+            if (isSubmission)
             {
+                // Always require a proof file when submitting
                 if (dto.ProofFile == null || dto.ProofFile.Length == 0)
                     return BadRequest("Proof file is required when submitting a task.");
 
-                // Validate file type and size
+                // File type validation
                 var allowedExtensions = new[] { ".pdf", ".jpg", ".jpeg", ".png" };
-                var fileExtension = Path.GetExtension(dto.ProofFile.FileName).ToLower();
+                var fileExtension = Path.GetExtension(dto.ProofFile.FileName).ToLowerInvariant();
                 if (!allowedExtensions.Contains(fileExtension))
-                    return BadRequest("Only PDF and image files (JPG, PNG) are allowed.");
+                    return BadRequest("Only PDF, JPG, JPEG, and PNG files are allowed.");
 
-                if (dto.ProofFile.Length > 5 * 1024 * 1024)  // 5MB limit
+                // File size validation
+                if (dto.ProofFile.Length > 5 * 1024 * 1024)
                     return BadRequest("File size must be less than 5MB.");
 
-                // Save the file
+                // Save the new file (overwrites old one automatically)
                 var uploadsDir = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads", "tasks");
-                Directory.CreateDirectory(uploadsDir);  // Ensure directory exists
-                var fileName = $"{id}_{Guid.NewGuid()}{fileExtension}";
-                var filePath = Path.Combine(uploadsDir, fileName);
+                Directory.CreateDirectory(uploadsDir);
+                var safeFileName = $"{id}_{Guid.NewGuid()}{fileExtension}";
+                var filePath = Path.Combine(uploadsDir, safeFileName);
 
                 using (var stream = new FileStream(filePath, FileMode.Create))
                 {
                     await dto.ProofFile.CopyToAsync(stream);
                 }
 
-                // Update task with proof and timestamp
-                task.ProofFilePath = $"/uploads/tasks/{fileName}";  // Relative path for serving
+                // Update task with new proof
+                task.ProofFilePath = $"/uploads/tasks/{safeFileName}";
                 task.SubmittedAt = DateTime.UtcNow;
             }
 
-            // Update status
+            // Update the status (this allows Submitted → InProgress → Submitted again, etc.)
             task.Status = dto.Status;
+
             await _db.SaveChangesAsync();
 
             return Ok(task);
         }
-
         // ✅ UPDATED DTO: Now includes file upload
         public record TaskStatusUpdateDto(TaskStatus Status, IFormFile? ProofFile);
     }

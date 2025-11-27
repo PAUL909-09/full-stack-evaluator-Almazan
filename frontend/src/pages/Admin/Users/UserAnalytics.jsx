@@ -3,7 +3,7 @@ import {
   PieChart, Pie, Cell,
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer
 } from "recharts";
-import { getAdminAnalytics } from "@/services/adminService";
+import  getAdminAnalytics  from "@/services/adminService";
 // eslint-disable-next-line no-unused-vars
 import { motion } from "framer-motion";
 

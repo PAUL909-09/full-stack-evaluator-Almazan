@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using task_manager_api.Services;
-using task_manager_api.Models;
-using Microsoft.EntityFrameworkCore;
-using task_manager_api.Data;
+using task_manager_api.Models;  // Add this line to include the Role enum
 
 namespace task_manager_api.Controllers
 {
@@ -10,60 +8,31 @@ namespace task_manager_api.Controllers
     [Route("api/admin")]
     public class AdminController : ControllerBase
     {
-        private readonly AuthService _authService;
-        private readonly ApplicationDbContext _context;
+        private readonly AdminService _adminService;
 
-        public AdminController(AuthService authService, ApplicationDbContext context)
+        public AdminController(AdminService adminService)
         {
-            _authService = authService;
-            _context = context;
+            _adminService = adminService;
         }
 
-        // 📨 POST /api/admin/invite
         [HttpPost("invite")]
-        public async Task<IActionResult> InviteUser([FromBody] InviteDto dto)
+        public async Task<IActionResult> Invite([FromBody] AdminController.InviteDto dto)
         {
-            try
-            {
-                if (string.IsNullOrEmpty(dto.Email) || string.IsNullOrEmpty(dto.Name))
-                    return BadRequest(new { message = "Name and Email are required." });
-
-                if (!Enum.TryParse<Role>(dto.Role, true, out var role))
-                    return BadRequest(new { message = "Invalid role specified." });
-
-                var user = await _authService.InviteUserAsync(dto.Name, dto.Email, role);
-
-                return Ok(new
-                {
-                    message = "Invite sent successfully.",
-                    user.Email,
-                    user.Role
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            var user = await _adminService.InviteUserAsync(dto.Name, dto.Email, Enum.Parse<Role>(dto.Role));
+            return Ok(new { message = "Invite sent", user });
         }
 
-        // 📋 GET /api/admin/pending-invites
         [HttpGet("pending-invites")]
-        public async Task<IActionResult> GetPendingInvites()
+        public async Task<IActionResult> PendingInvites()
         {
-            var users = await _context.Users
-    .Where(u => !u.IsEmailVerified && u.OtpExpiresAt != null && u.OtpExpiresAt > DateTime.UtcNow)
-    .Select(u => new { u.Name, u.Email, Role = u.Role.ToString(), u.IsEmailVerified, u.OtpExpiresAt })
-    .ToListAsync();
-
-            return Ok(users);
+            return Ok(await _adminService.GetPendingInvitesAsync());
         }
 
-        // DTO for invites
         public class InviteDto
         {
-            public string Name { get; set; } = string.Empty;
-            public string Email { get; set; } = string.Empty;
-            public string Role { get; set; } = string.Empty;
+            public string Name { get; set; } = "";
+            public string Email { get; set; } = "";
+            public string Role { get; set; } = "";
         }
     }
 }

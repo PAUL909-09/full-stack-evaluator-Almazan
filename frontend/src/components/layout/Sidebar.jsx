@@ -14,6 +14,7 @@ import {
   User,
   ClipboardCheck,
   UserPlus,
+  List
 } from "lucide-react";
 import { useState } from "react";
 import { authService } from "@/services/authService"; // FIXED PATH
@@ -50,7 +51,9 @@ const baseMenu = {
     // },
     { to: "/evaluator/evaluation-history", icon: BarChart, label: "My Evaluations" },
   ],
-  Employee: [{ to: "/employee/dashboard", icon: Home, label: "My Tasks" }],
+  Employee: [{ to: "/employee/dashboard", icon: Home, label: "My Tasks" },
+    { to: "/employee/tasks", icon: List, label: "My Tasks" },
+  ],
 };
 
 export default function Sidebar({ user, onLinkClick }) {

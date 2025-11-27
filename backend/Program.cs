@@ -105,31 +105,16 @@ builder.Services.AddCors(options =>
               .AllowCredentials());
 });
 
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend",
-        policy =>
-        {
-            policy.AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials()
-                  .WithOrigins("http://localhost:5173");
-        });
-});
-
-
 var app = builder.Build();
 
 // ===== Pipeline =====
 app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskManager API v1"));
 
+// CORRECT CORS
 app.UseCors("AllowReactApp");
 
-
-app.UseCors();
-app.UseStaticFiles(); 
-//TEMPORARY: Disable Auth for Testing (Optional)
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
