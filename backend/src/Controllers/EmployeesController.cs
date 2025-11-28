@@ -7,6 +7,8 @@ using System.Security.Claims;
 using task_manager_api.Dtos;
 using System.IO;  // For file handling
 using Microsoft.AspNetCore.Http;  // For IFormFile
+using task_manager_api.Services.Employees;
+
 
 // ✅ Fix ambiguity between System.Threading.Tasks.TaskStatus and our enum
 using TaskStatus = task_manager_api.Models.TaskStatus;
@@ -29,23 +31,19 @@ namespace task_manager_api.Controllers
 
         // GET: api/employees/tasks - Fetch tasks assigned to the current employee
         [HttpGet("tasks")]
-        public async Task<IActionResult> GetMyTasks()
+        public async Task<IActionResult> GetMyTasks([FromServices] IEmployeeTaskService taskService)
         {
-            // Extract current user ID from JWT token
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var currentUserId))
+            try
+            {
+                var tasks = await taskService.GetMyTasksAsync(User);
+                return Ok(tasks);
+            }
+            catch (UnauthorizedAccessException)
+            {
                 return Unauthorized("Invalid user token.");
-
-            var tasks = await _db.Tasks
-                .Where(t => t.AssignedToId == currentUserId)
-                .Include(t => t.Project)      // Include project details
-                .Include(t => t.CreatedBy)    // Include evaluator who created the task
-                .Include(t => t.Comments)
-                .Include(t => t.Evaluation)
-                .ToListAsync();
-
-            return Ok(tasks);
+            }
         }
+
 
         // ✅ NEW: GET: api/employees - Fetch all employees (for evaluators to assign)
         [HttpGet]

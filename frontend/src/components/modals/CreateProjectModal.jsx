@@ -1,65 +1,77 @@
 // frontend/src/components/modals/CreateProjectModal.jsx
-import { useEffect, useState } from "react";  // ✅ Removed unused React import
+import { useEffect, useState } from "react";
 import api from "@/api/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toast } from "react-toastify";  // ✅ Added for consistency
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { Calendar as CalendarIcon, X } from "lucide-react";
+import { toast } from "react-toastify";
 import { useAuth } from "@/hooks/useAuth";
-import { X } from "lucide-react";
-// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 
-export default function CreateProjectModal({ open, onClose, onSuccess, project }) {
+export default function CreateProjectModal({ 
+  open, 
+  onClose, 
+  project, 
+  onSubmit   // ← We now use this
+}) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [deadline, setDeadline] = useState(null);
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
   const isEdit = Boolean(project);
 
-  // 🔹 Pre-fill form when editing
   useEffect(() => {
-    if (isEdit) {
-      setName(project?.name || "");
-      setDescription(project?.description || "");
-    } else {
-      setName("");
-      setDescription("");
+    if (open) {
+      if (isEdit && project) {
+        setName(project.name || "");
+        setDescription(project.description || "");
+        setDeadline(project.deadline ? new Date(project.deadline) : null);
+      } else {
+        setName("");
+        setDescription("");
+        setDeadline(null);
+      }
     }
-  }, [project, isEdit]);
+  }, [project, isEdit, open]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!user) return;
+    if (!name.trim()) return toast.error("Project name is required");
 
     try {
       setLoading(true);
 
       const payload = {
-        name,
-        description,
+        name: name.trim(),
+        description: description.trim() || null,
         evaluatorId: user.id,
+        deadline: deadline ? deadline.toISOString() : null,
       };
 
       if (isEdit) {
-        // 🔹 Update project
         await api.put(`/projects/${project.id}`, payload);
-        toast.success(`Project "${name}" was successfully updated.`);  // ✅ Replaced custom toast
+        toast.success("Project updated successfully!");
       } else {
-        // 🔹 Create project
-        const res = await api.post("/projects", payload);
-        toast.success(`Project "${name}" was successfully created.`);  // ✅ Replaced custom toast
+        await api.post("/projects", payload);
+        toast.success("Project created successfully!");
       }
 
-      onSuccess?.();
+      // This is the KEY — pass data back
+      onSubmit?.();
       onClose();
     } catch (err) {
-      console.error("Error saving project:", err);
-      toast.error(
-        err.response?.data?.message ||
-        "Something went wrong while saving the project."
-      );  // ✅ Replaced custom toast
+      toast.error(err.response?.data?.message || "Failed to save project");
     } finally {
       setLoading(false);
     }
@@ -69,74 +81,84 @@ export default function CreateProjectModal({ open, onClose, onSuccess, project }
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
           <motion.div
-            className="relative w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-[#A0DCFC]/40 p-8"
-            initial={{ scale: 0.95, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            transition={{ duration: 0.25 }}
+            className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-8"
+            initial={{ scale: 0.9, y: 20 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.9, y: 20 }}
           >
-            {/* Close Button */}
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              className="absolute top-4 right-4 text-gray-500 hover:bg-gray-100 rounded-full p-2"
             >
               <X className="w-5 h-5" />
             </button>
 
-            {/* Title */}
-            <h1 className="text-2xl font-bold text-center mb-6 bg-gradient-to-r from-blue-600 to-sky-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold text-center mb-8 text-emerald-600">
               {isEdit ? "Edit Project" : "Create New Project"}
             </h1>
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <Label className="text-gray-700 dark:text-gray-300 font-medium">
-                  Project Name
-                </Label>
+                <Label>Project Name *</Label>
                 <Input
-                  placeholder="Enter project name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Mobile App Redesign"
                   required
-                  className="mt-2 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-2"
                 />
               </div>
 
               <div>
-                <Label className="text-gray-700 dark:text-gray-300 font-medium">
-                  Description
-                </Label>
+                <Label>Description (Optional)</Label>
                 <Input
-                  placeholder="Brief project description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="mt-2 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500"
+                  placeholder="Brief overview..."
+                  className="mt-2"
                 />
+              </div>
+
+              {/* FIXED: Beautiful, visible calendar */}
+              <div>
+                <Label>Deadline (Optional)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal mt-2 h-12",
+                        !deadline && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {deadline ? format(deadline, "PPP") : "Pick a deadline"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={deadline}
+                      onSelect={setDeadline}
+                      disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <Button
                 type="submit"
-                disabled={loading}
-                className={`w-full text-white font-semibold py-2 rounded-lg shadow-md transition duration-200 ${
-                  isEdit
-                    ? "bg-blue-600 hover:bg-blue-700"
-                    : "bg-emerald-600 hover:bg-emerald-700"
-                }`}
+                disabled={loading || !name.trim()}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-6 text-lg rounded-xl"
               >
-                {loading
-                  ? isEdit
-                    ? "Updating..."
-                    : "Creating..."
-                  : isEdit
-                    ? "Update Project"
-                    : "Create Project"}
+                {loading ? "Saving..." : isEdit ? "Update Project" : "Create Project"}
               </Button>
             </form>
           </motion.div>

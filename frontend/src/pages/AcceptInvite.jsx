@@ -22,10 +22,14 @@ export default function AcceptInvite() {
     e.preventDefault();
     try {
       await authService.acceptInvite(token, password);
-      toast.success("Account activated! You can now log in with your new password.");
+      toast.success(
+        "Account activated! You can now log in with your new password."
+      );
       navigate("/login");
     } catch (err) {
-      toast.error("Error: " + (err.message || "Invalid or expired invite link."));
+      toast.error(
+        "Error: " + (err.message || "Invalid or expired invite link.")
+      );
     }
   };
 
@@ -41,7 +45,10 @@ export default function AcceptInvite() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <Label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <Label
+                htmlFor="password"
+                className="text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
                 New Password
               </Label>
               <div className="relative mt-1">
@@ -59,7 +66,11 @@ export default function AcceptInvite() {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </div>

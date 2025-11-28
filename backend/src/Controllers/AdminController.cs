@@ -1,38 +1,84 @@
+// backend/src/Controllers/AdminController.cs
 using Microsoft.AspNetCore.Mvc;
 using task_manager_api.Services;
-using task_manager_api.Models;  // Add this line to include the Role enum
+using task_manager_api.Models;
+using Microsoft.AspNetCore.Authorization;
+using TaskStatus = task_manager_api.Models.TaskStatus;
 
 namespace task_manager_api.Controllers
 {
     [ApiController]
     [Route("api/admin")]
+    [Authorize(Roles = "Admin")] // Restrict to admins
     public class AdminController : ControllerBase
     {
+        private readonly AuthService _authService;
         private readonly AdminService _adminService;
 
-        public AdminController(AdminService adminService)
+        public AdminController(AuthService authService, AdminService adminService)
         {
+            _authService = authService;
             _adminService = adminService;
         }
 
+        // GET /api/admin/analytics
+        [HttpGet("analytics")]
+        public async Task<IActionResult> GetAnalytics()
+        {
+            var data = await _adminService.GetAdminAnalyticsAsync();
+            return Ok(data);
+        }
+
+        // 📨 POST /api/admin/invite
         [HttpPost("invite")]
-        public async Task<IActionResult> Invite([FromBody] AdminController.InviteDto dto)
+        public async Task<IActionResult> InviteUser([FromBody] InviteDto dto)
         {
-            var user = await _adminService.InviteUserAsync(dto.Name, dto.Email, Enum.Parse<Role>(dto.Role));
-            return Ok(new { message = "Invite sent", user });
+            // Logic unchanged, but now consistent with service pattern
+            if (string.IsNullOrEmpty(dto.Email) || string.IsNullOrEmpty(dto.Name))
+                return BadRequest(new { message = "Name and Email are required." });
+
+            if (!Enum.TryParse<Role>(dto.Role, true, out var role))
+                return BadRequest(new { message = "Invalid role specified." });
+
+            var user = await _authService.InviteUserAsync(dto.Name, dto.Email, role);
+
+            return Ok(new
+            {
+                message = "Invite sent successfully.",
+                user.Email,
+                user.Role
+            });
         }
 
+        // 📋 GET /api/admin/pending-invites
         [HttpGet("pending-invites")]
-        public async Task<IActionResult> PendingInvites()
+        public async Task<IActionResult> GetPendingInvites()
         {
-            return Ok(await _adminService.GetPendingInvitesAsync());
+            var invites = await _adminService.GetPendingInvitesAsync();
+            return Ok(invites);
         }
 
+        // GET /api/admin/dashboard
+        [HttpGet("dashboard")]
+        public async Task<IActionResult> GetDashboardSummary()
+        {
+            var data = await _adminService.GetDashboardStatsAsync();
+            return Ok(data);
+        }
+
+
+        [HttpGet("projects/analytics")]
+        public async Task<IActionResult> GetProjectAnalytics()
+        {
+            var projects = await _adminService.GetProjectAnalyticsAsync();
+            return Ok(projects);
+        }
+        // DTO for invites (unchanged)
         public class InviteDto
         {
-            public string Name { get; set; } = "";
-            public string Email { get; set; } = "";
-            public string Role { get; set; } = "";
+            public string Name { get; set; } = string.Empty;
+            public string Email { get; set; } = string.Empty;
+            public string Role { get; set; } = string.Empty;
         }
     }
 }

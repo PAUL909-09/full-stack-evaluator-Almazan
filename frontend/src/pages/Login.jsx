@@ -31,7 +31,9 @@ export default function Login() {
         else navigate("/login");
       }, 400);
     } catch (err) {
-      toast.error("Login failed: " + (err.message || "Invalid email or password"));
+      toast.error(
+        "Login failed: " + (err.message || "Invalid email or password")
+      );
     }
   };
 

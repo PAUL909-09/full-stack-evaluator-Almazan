@@ -20,6 +20,7 @@ import UserAnalytics from "@/pages/Admin/Users/UserAnalytics";
 import UserDetails from "@/pages/Admin/Users/UserDetails";
 import UserProjects from "@/pages/Admin/Users/UserProjects";
 import ProjectEmployees from "@/pages/Admin/Users/ProjectEmployees";
+import ProjectAnalytics from "@/pages/Admin/ProjectAnalytics";
 
 export default [
   <Route
@@ -78,4 +79,12 @@ export default [
       </AdminOnly>
     }
   />,
+  <Route
+  path="/admin/projects/analytics"
+  element={
+    <AdminOnly>
+      <ProjectAnalytics />
+    </AdminOnly>
+  }
+/>
 ];

@@ -2,7 +2,7 @@ import { authService } from "@/services/authService";
 
 function LogoutButton() {
   const handleLogout = () => {
-    authService.logout();  // ← Clears token + redirects
+    authService.logout(); // ← Clears token + redirects
   };
 
   return (

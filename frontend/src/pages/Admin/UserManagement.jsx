@@ -1,3 +1,4 @@
+//frontend\src\pages\Admin\UserManagement.jsx
 import React, { useState, useEffect } from "react";
 import UserList from "./Users/UserList";
 import UserDetails from "./Users/UserDetails";

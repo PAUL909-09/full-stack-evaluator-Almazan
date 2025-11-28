@@ -24,7 +24,8 @@ export const authService = {
 
       return finalToken;
     } catch (err) {
-      const message = err.response?.data?.message || err.message || "Login failed";
+      const message =
+        err.response?.data?.message || err.message || "Login failed";
       throw new Error(message);
     }
   },
@@ -42,7 +43,6 @@ export const authService = {
       throw new Error(err.response?.data?.message || "Verification failed");
     }
   },
-
   getCurrentUser() {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) return null;

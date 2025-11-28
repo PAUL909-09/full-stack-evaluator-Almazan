@@ -27,10 +27,15 @@ export default function VerifyInvite() {
     e.preventDefault();
     try {
       await authService.verifyInvite({ email, otp, password });
-      toast.success("Account Verified! Your password is set. You can now log in.");
+      toast.success(
+        "Account Verified! Your password is set. You can now log in."
+      );
       navigate("/login");
     } catch (err) {
-      toast.error("Verification Failed: " + (err.message || "Invalid OTP or expired link."));
+      toast.error(
+        "Verification Failed: " +
+          (err.message || "Invalid OTP or expired link.")
+      );
     }
   };
 

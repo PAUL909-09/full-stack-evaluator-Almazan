@@ -25,6 +25,7 @@ import ManageAssignments from "@/pages/Evaluator/ManageAssignments";
 import TaskTable from "@/pages/Evaluator/TaskTable";
 // import TaskReviews from "@/pages/Evaluator/TaskReviews";
 import MyTasks from "@/pages/Employee/MyTasks";
+import ProjectAnalytics from "@/pages/Admin/ProjectAnalytics";
 
 // Employee pages
 import EmployeeDashboard from "@/pages/Employee/EmployeeDashboard";
@@ -32,6 +33,7 @@ import EmployeeDashboard from "@/pages/Employee/EmployeeDashboard";
 // Shared pages
 import TaskDetails from "@/pages/TaskDetails";
 import EvaluationHistory from "@/pages/Evaluator/EvaluationHistory";
+import UserDetails from "@/pages/Admin/Users/UserDetails";
 
 export default function ProtectedRoutes() {
   return (
@@ -57,6 +59,14 @@ export default function ProtectedRoutes() {
           element={
             <AdminOnly>
               <AdminVerifyUsers />
+            </AdminOnly>
+          }
+        />
+        <Route
+          path="/admin/projects/analytics"
+          element={
+            <AdminOnly>
+              <ProjectAnalytics />
             </AdminOnly>
           }
         />
@@ -162,6 +172,10 @@ export default function ProtectedRoutes() {
               <EvaluationHistory />
             </EvaluatorOnly>
           }
+        />
+        <Route
+          path="/evaluator/project-tasks/:projectId"
+          element={<ProjectTasksPage />}
         />
 
         {/* === EMPLOYEE ROUTES === */}

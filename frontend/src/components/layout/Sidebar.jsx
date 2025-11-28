@@ -14,7 +14,8 @@ import {
   User,
   ClipboardCheck,
   UserPlus,
-  List
+  List,
+  FolderKanban
 } from "lucide-react";
 import { useState } from "react";
 import { authService } from "@/services/authService"; // FIXED PATH
@@ -25,14 +26,13 @@ const baseMenu = {
     { to: "/admin/dashboard", icon: Home, label: "Dashboard" },
     { to: "/admin/verify-users", icon: Users, label: "Verify Users" },
     { to: "/admin/users/analytics", icon: BarChart, label: "User Analytics" },
-    { to: "/admin/users/details", icon: CheckSquare, label: "User Details" },
-    { to: "/admin/users/projects", icon: FolderPlus, label: "User Projects" },
+    { to: "/admin/projects/analytics", icon: FolderKanban, label: "Project Analytics" },
   ],
   Evaluator: [
     { to: "/evaluator/dashboard", icon: Home, label: "Dashboard" },
     // { to: "/projects/create", icon: FolderPlus, label: "New Project" }, // UNCOMMENTED
     // { to: "/tasks/create", icon: FilePlus, label: "Manage Task" },
-    {to: "/evaluator/tasks", icon: CheckSquare, label: "Manage Tasks" },
+    { to: "/evaluator/tasks", icon: CheckSquare, label: "Manage Tasks" },
     { to: "/evaluator/projects", icon: FolderOpen, label: "Manage Projects" },
     // {
     //   to: "/evaluator/assign-employees",
@@ -49,9 +49,14 @@ const baseMenu = {
     //   icon: Users,
     //   label: "Manage Assignments",
     // },
-    { to: "/evaluator/evaluation-history", icon: BarChart, label: "My Evaluations" },
+    {
+      to: "/evaluator/evaluation-history",
+      icon: BarChart,
+      label: "My Evaluations",
+    },
   ],
-  Employee: [{ to: "/employee/dashboard", icon: Home, label: "My Tasks" },
+  Employee: [
+    { to: "/employee/dashboard", icon: Home, label: "My Tasks" },
     { to: "/employee/tasks", icon: List, label: "My Tasks" },
   ],
 };

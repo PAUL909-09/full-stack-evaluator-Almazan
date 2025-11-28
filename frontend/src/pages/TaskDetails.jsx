@@ -23,7 +23,9 @@ export default function TaskDetails() {
         const res = await api.get(`/tasks/${id}`);
         setTask(res.data);
       } catch (err) {
-        toast.error("Failed to load task: " + (err.message || "Please try again."));
+        toast.error(
+          "Failed to load task: " + (err.message || "Please try again.")
+        );
       }
     };
 
@@ -41,7 +43,7 @@ export default function TaskDetails() {
       await api.post(`/tasks/${id}/evaluations`, {
         evaluatorId: user.id,
         score: Number(score),
-        comments: comments.trim()
+        comments: comments.trim(),
       });
       toast.success("Success! Evaluation submitted.");
       setScore("");
@@ -80,24 +82,36 @@ export default function TaskDetails() {
           <CardContent className="space-y-3">
             <div>
               <span className="font-medium text-gray-700">Project:</span>{" "}
-              <span className="text-gray-600">{task.project?.name || "N/A"}</span>
+              <span className="text-gray-600">
+                {task.project?.name || "N/A"}
+              </span>
             </div>
             <div>
               <span className="font-medium text-gray-700">Assigned To:</span>{" "}
-              <span className="text-gray-600">{task.assignedTo?.name || "Unassigned"}</span>
+              <span className="text-gray-600">
+                {task.assignedTo?.name || "Unassigned"}
+              </span>
             </div>
             <div>
               <span className="font-medium text-gray-700">Status:</span>{" "}
-              <span className={`inline-block px-3 py-1 text-xs font-bold rounded-full
-                ${task.status === "Done" ? "bg-green-100 text-green-800" :
-                  task.status === "InProgress" ? "bg-yellow-100 text-yellow-800" :
-                  "bg-gray-100 text-gray-800"}`}>
+              <span
+                className={`inline-block px-3 py-1 text-xs font-bold rounded-full
+                ${
+                  task.status === "Done"
+                    ? "bg-green-100 text-green-800"
+                    : task.status === "InProgress"
+                    ? "bg-yellow-100 text-yellow-800"
+                    : "bg-gray-100 text-gray-800"
+                }`}
+              >
                 {task.status}
               </span>
             </div>
             <div>
               <span className="font-medium text-gray-700">Created By:</span>{" "}
-              <span className="text-gray-600">{task.createdBy?.name || "Unknown"}</span>
+              <span className="text-gray-600">
+                {task.createdBy?.name || "Unknown"}
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -110,7 +124,9 @@ export default function TaskDetails() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="score" className="text-sm font-medium">Score (0–10)</Label>
+                <Label htmlFor="score" className="text-sm font-medium">
+                  Score (0–10)
+                </Label>
                 <Input
                   id="score"
                   type="number"
@@ -124,7 +140,9 @@ export default function TaskDetails() {
                 />
               </div>
               <div>
-                <Label htmlFor="comments" className="text-sm font-medium">Comments</Label>
+                <Label htmlFor="comments" className="text-sm font-medium">
+                  Comments
+                </Label>
                 <Input
                   id="comments"
                   value={comments}
@@ -151,9 +169,12 @@ export default function TaskDetails() {
               <p className="text-3xl font-bold text-green-600 mb-2">
                 {task.evaluation.score}/10
               </p>
-              <p className="text-gray-600 italic">"{task.evaluation.comments}"</p>
+              <p className="text-gray-600 italic">
+                "{task.evaluation.comments}"
+              </p>
               <p className="text-sm text-gray-500 mt-3">
-                — {task.evaluation.evaluator?.name}, {new Date(task.evaluation.evaluatedAt).toLocaleDateString()}
+                — {task.evaluation.evaluator?.name},{" "}
+                {new Date(task.evaluation.evaluatedAt).toLocaleDateString()}
               </p>
             </CardContent>
           </Card>

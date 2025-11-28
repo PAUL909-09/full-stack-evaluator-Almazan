@@ -1,11 +1,21 @@
+// frontend/src/pages/Admin/Users/UserAnalytics.jsx
+
 import React, { useEffect, useState } from "react";
 import {
-  PieChart, Pie, Cell,
-  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
 } from "recharts";
-import  getAdminAnalytics  from "@/services/adminService";
-// eslint-disable-next-line no-unused-vars
+import adminService from "@/services/adminService";
 import { motion } from "framer-motion";
+import DataTable from "@/components/table/DataTable";
 
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
@@ -13,58 +23,75 @@ export default function UserAnalytics() {
   const [data, setData] = useState(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const res = await getAdminAnalytics();
-      setData(res);
-    };
-    fetchData();
+    adminService.getAdminAnalytics().then(setData).catch(console.error);
   }, []);
 
   if (!data) {
     return (
-      <div className="flex items-center justify-center py-10 text-gray-500">
-        Loading analytics...
+      <div className="flex items-center justify-center py-20 text-gray-400 text-lg">
+        Loading analytics…
       </div>
     );
   }
 
-  const { summary, userStats, projectStats, taskStats, evalStats } = data;
+  const {
+    summary,
+    userStats,
+    projectStats,
+    taskStats,
+    evaluationStats,
+    evaluatorDetails,
+    employeeDetails,
+  } = data;
 
   return (
-    <div className="space-y-10">
-      {/* 🔢 Summary Cards */}
+    <div className="space-y-14">
+      {/* Page Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center space-y-2"
+      >
+        <h1 className="text-4xl font-bold text-[#0A66B3]">
+          User Analytics Dashboard
+        </h1>
+        <p className="text-gray-500">
+          A detailed insight into users, tasks, evaluations & performance
+        </p>
+      </motion.div>
+
+      {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         {[
           { label: "Total Users", value: summary.totalUsers },
           { label: "Projects", value: summary.totalProjects },
           { label: "Tasks", value: summary.totalTasks },
-          { label: "Avg Eval Score", value: summary.avgEvalScore.toFixed(2) },
-        ].map((card, idx) => (
+          { label: "Evaluations", value: summary.totalEvaluations },
+        ].map((item, idx) => (
           <motion.div
             key={idx}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            className="bg-white rounded-lg shadow-md p-6 text-center"
+            whileHover={{ scale: 1.04 }}
+            className="
+              bg-gradient-to-br from-[#EAF6FF] to-[#ffffff]
+              border border-[#A0DCFC]/50 shadow-md rounded-2xl
+              p-6 text-center transition-all
+            "
           >
-            <p className="text-gray-600 text-sm">{card.label}</p>
-            <h2 className="text-3xl font-bold text-blue-600">{card.value}</h2>
+            <p className="text-sm text-[#0A66B3]">{item.label}</p>
+            <h2 className="text-4xl font-bold text-[#0A66B3]">
+              {item.value}
+            </h2>
           </motion.div>
         ))}
       </div>
 
-      {/* 🧍 User Role Distribution */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="bg-white rounded-lg shadow p-6"
-      >
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">
-          User Distribution by Role
-        </h3>
-        <ResponsiveContainer width="100%" height={300}>
+      {/* Chart Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+
+        {/* User Role Pie */}
+        <ChartCard title="User Distribution by Role">
           <PieChart>
-            <Pie dataKey="count" data={userStats} cx="50%" cy="50%" outerRadius={100} label>
+            <Pie dataKey="count" data={userStats} outerRadius={110} label>
               {userStats.map((_, i) => (
                 <Cell key={i} fill={COLORS[i % COLORS.length]} />
               ))}
@@ -72,28 +99,12 @@ export default function UserAnalytics() {
             <Tooltip />
             <Legend />
           </PieChart>
-        </ResponsiveContainer>
-      </motion.div>
+        </ChartCard>
 
-      {/* 📊 Projects per Evaluator */}
-      <motion.div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Projects per Evaluator</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={projectStats}>
-            <XAxis dataKey="evaluator" />
-            <YAxis />
-            <Tooltip />
-            <Bar dataKey="projectCount" fill="#3b82f6" />
-          </BarChart>
-        </ResponsiveContainer>
-      </motion.div>
-
-      {/* ✅ Task Status Breakdown */}
-      <motion.div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Task Status Breakdown</h3>
-        <ResponsiveContainer width="100%" height={250}>
+        {/* Task Status */}
+        <ChartCard title="Task Status Breakdown">
           <PieChart>
-            <Pie dataKey="count" data={taskStats} cx="50%" cy="50%" innerRadius={60} outerRadius={100} label>
+            <Pie dataKey="count" data={taskStats} outerRadius={110} label>
               {taskStats.map((_, i) => (
                 <Cell key={i} fill={COLORS[i % COLORS.length]} />
               ))}
@@ -101,21 +112,78 @@ export default function UserAnalytics() {
             <Tooltip />
             <Legend />
           </PieChart>
-        </ResponsiveContainer>
-      </motion.div>
+        </ChartCard>
 
-      {/* 🌟 Average Evaluation per Project */}
-      <motion.div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Average Evaluation Score per Project</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart layout="vertical" data={evalStats}>
-            <XAxis type="number" />
-            <YAxis type="category" dataKey="project" width={150} />
+        {/* Projects Bar */}
+        <ChartCard title="Tasks per Project">
+          <BarChart data={projectStats}>
+            <XAxis dataKey="project" />
+            <YAxis />
             <Tooltip />
-            <Bar dataKey="avgScore" fill="#10b981" />
+            <Legend />
+            <Bar dataKey="taskCount" fill="#3b82f6" />
           </BarChart>
-        </ResponsiveContainer>
-      </motion.div>
+        </ChartCard>
+
+        {/* Evaluations Pie */}
+        <ChartCard title="Evaluation Status Breakdown">
+          <PieChart>
+            <Pie dataKey="count" data={evaluationStats} outerRadius={110} label>
+              {evaluationStats.map((_, i) => (
+                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </ChartCard>
+      </div>
+
+      {/* Evaluator Table */}
+      <DataTable
+        title="Evaluator Performance Report"
+        columns={[
+          { key: "name", label: "Name" },
+          { key: "email", label: "Email" },
+          { key: "assignedTasks", label: "Tasks Created" },
+          { key: "evaluationsGiven", label: "Evaluations Done" },
+        ]}
+        data={evaluatorDetails}
+      />
+
+      {/* Employee Table */}
+      <DataTable
+        title="Employee Task Activity Report"
+        columns={[
+          { key: "name", label: "Name" },
+          { key: "email", label: "Email" },
+          { key: "tasksAssigned", label: "Total Tasks" },
+          { key: "completedTasks", label: "Completed" },
+          { key: "pendingTasks", label: "Pending" },
+        ]}
+        data={employeeDetails}
+      />
     </div>
+  );
+}
+
+/* Reusable Chart Card Component */
+function ChartCard({ title, children }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      className="
+        bg-white border border-[#A0DCFC]/50 rounded-2xl shadow-lg
+        p-6 backdrop-blur-sm
+      "
+    >
+      <h3 className="text-lg font-semibold text-[#0A66B3] mb-4">{title}</h3>
+
+      <ResponsiveContainer width="100%" height={300}>
+        {children}
+      </ResponsiveContainer>
+    </motion.div>
   );
 }

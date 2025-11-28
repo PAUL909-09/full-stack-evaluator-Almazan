@@ -85,7 +85,7 @@ export default function CreateTaskModal({
       }
     })();
   }, [selectedProjectId]);
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim() || !selectedProjectId || !selectedEmployeeId) {
@@ -197,7 +197,9 @@ export default function CreateTaskModal({
                   <Select
                     value={selectedEmployeeId}
                     onValueChange={setSelectedEmployeeId}
-                    disabled={!selectedProjectId || assignedEmployees.length === 0}
+                    disabled={
+                      !selectedProjectId || assignedEmployees.length === 0
+                    }
                   >
                     <SelectTrigger className="mt-2 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500">
                       <SelectValue
@@ -274,7 +276,10 @@ export default function CreateTaskModal({
                   <Button
                     type="submit"
                     disabled={
-                      saving || !title || !selectedProjectId || !selectedEmployeeId
+                      saving ||
+                      !title ||
+                      !selectedProjectId ||
+                      !selectedEmployeeId
                     }
                     className={`px-4 py-2 text-white font-semibold rounded-lg shadow-md transition duration-200 ${
                       isEdit

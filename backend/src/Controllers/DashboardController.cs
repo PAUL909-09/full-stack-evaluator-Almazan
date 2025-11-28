@@ -1,10 +1,8 @@
+// backend/src/Controllers/DashboardController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using task_manager_api.Data;
-using task_manager_api.Models;
-// ✅ Prevents conflict with System.Threading.Tasks.TaskStatus
-using TaskStatus = task_manager_api.Models.TaskStatus;
+using task_manager_api.Services;
+
 namespace task_manager_api.Controllers
 {
     [ApiController]
@@ -12,27 +10,25 @@ namespace task_manager_api.Controllers
     [Authorize(Roles = "Admin")]
     public class DashboardController : ControllerBase
     {
-        private readonly ApplicationDbContext _db;
-        public DashboardController(ApplicationDbContext db) => _db = db;
+        private readonly AdminService _adminService;
+
+        public DashboardController(AdminService adminService)
+        {
+            _adminService = adminService;
+        }
 
         [HttpGet]
-        public async Task<IActionResult> GetStats()
+        public async Task<IActionResult> GetDashboard()
         {
-            var stats = new
+            var stats = await _adminService.GetDashboardStatsAsync();
+            return Ok(new
             {
-                TotalUsers = await _db.Users.CountAsync(),
-                Evaluators = await _db.Users.CountAsync(u => u.Role == Role.Evaluator),
-                Employees = await _db.Users.CountAsync(u => u.Role == Role.Employee),
-
-                Projects = await _db.Projects.CountAsync(),
-                Tasks = await _db.Tasks.CountAsync(),
-                DoneTasks = await _db.Tasks.CountAsync(t => t.Status == TaskStatus.Done),
-
-                Evaluations = await _db.Evaluations.CountAsync(),
-                
-            };
-
-            return Ok(stats);
+                totalUsers = stats.TotalUsers,
+                evaluators = stats.Evaluators,
+                employees = stats.Employees,
+                projects = stats.Projects,
+                doneTasks = stats.DoneTasks
+            });
         }
     }
 }

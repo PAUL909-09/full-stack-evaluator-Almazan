@@ -1,100 +1,133 @@
-// frontend/src/pages/Employee/EmployeeDashboard.jsx
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import DataTable from "@/components/table/DataTable";
 import employeeService from "@/services/employeeService";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import  Badge  from "@/components/ui/badge";
-import { useAuth } from "@/hooks/useAuth";
-import { toast } from "react-toastify";
-import { FileText, CheckCircle, AlertCircle, XCircle, Clock, BarChart3 } from "lucide-react";
 
-export default function EmployeeDashboard() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
+import {
+  CheckCircle,
+  Clock,
+  Hourglass,
+  CheckSquare,
+  AlertTriangle,
+  XCircle,
+} from "lucide-react";
+
+const EmployeeDashboard = () => {
+  const [tasks, setTasks] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Load all data
   useEffect(() => {
-    employeeService.getMyStats()
-      .then(setStats)
-      .catch(() => toast.error("Failed to load dashboard stats"))
-      .finally(() => setLoading(false));
+    loadData();
   }, []);
 
-  if (loading) return <div className="p-8 text-center">Loading your dashboard...</div>;
+  const loadData = async () => {
+    try {
+      const [tasksRes, statsRes] = await Promise.all([
+        employeeService.getMyTasks(),
+        employeeService.getMyStats(),
+      ]);
+
+      setTasks(tasksRes.data);
+      setStats(statsRes);
+    } catch (error) {
+      console.error("Dashboard load failed:", error);
+      setStats({});
+      setTasks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const statCards = [
-    { label: "Total Tasks", value: stats.total, icon: FileText, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "To Do", value: stats.todo, icon: Clock, color: "text-gray-600", bg: "bg-gray-50" },
-    { label: "In Progress", value: stats.inProgress, icon: BarChart3, color: "text-yellow-600", bg: "bg-yellow-50" },
-    { label: "Submitted", value: stats.submitted, icon: AlertCircle, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Approved", value: stats.approved, icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "Needs Revision", value: stats.needsRevision, icon: AlertCircle, color: "text-orange-600", bg: "bg-orange-50" },
-    { label: "Rejected", value: stats.rejected, icon: XCircle, color: "text-red-600", bg: "bg-red-50" },
+    {
+      label: "Total Tasks",
+      value: stats?.total || 0,
+      icon: <CheckSquare className="text-blue-600 w-6 h-6" />,
+    },
+    {
+      label: "To Do",
+      value: stats?.todo || 0,
+      icon: <Clock className="text-yellow-600 w-6 h-6" />,
+    },
+    {
+      label: "In Progress",
+      value: stats?.inProgress || 0,
+      icon: <Hourglass className="text-purple-600 w-6 h-6" />,
+    },
+    {
+      label: "Submitted",
+      value: stats?.submitted || 0,
+      icon: <AlertTriangle className="text-blue-500 w-6 h-6" />,
+    },
+    {
+      label: "Approved",
+      value: stats?.approved || 0,
+      icon: <CheckCircle className="text-green-600 w-6 h-6" />,
+    },
+    {
+      label: "Needs Revision",
+      value: stats?.needsRevision || 0,
+      icon: <AlertTriangle className="text-orange-500 w-6 h-6" />,
+    },
+    {
+      label: "Rejected",
+      value: stats?.rejected || 0,
+      icon: <XCircle className="text-red-600 w-6 h-6" />,
+    },
   ];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-4xl font-bold text-gray-800">Welcome back, {user?.name?.split(" ")[0] || "Employee"}!</h1>
-          <p className="text-gray-600 mt-2">Here's your task overview</p>
-        </div>
-        <Button onClick={() => navigate("/employee/tasks")} size="lg">
-          Go to My Tasks →
-        </Button>
+    <div className="p-8 space-y-10">
+      {/* Header */}
+      <motion.h1
+        className="text-3xl font-bold text-[#0A66B3]"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        Employee Dashboard
+      </motion.h1>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-5">
+        {statCards.map((card, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.04 }}
+            className="p-5 rounded-2xl bg-white shadow-md border border-[#A0DCFC]/40 hover:shadow-lg transition-all"
+          >
+            <div className="flex justify-between items-center">
+              <p className="text-gray-600 font-medium">{card.label}</p>
+              {card.icon}
+            </div>
+            <p className="mt-3 text-3xl font-bold text-[#0A66B3]">
+              {card.value}
+            </p>
+          </motion.div>
+        ))}
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-        {statCards.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.label} className="hover:shadow-lg transition-shadow">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
-                  {stat.label}
-                </CardTitle>
-                <Icon className={`w-5 h-5 ${stat.color}`} />
-              </CardHeader>
-              <CardContent>
-                <div className={`text-3xl font-bold ${stat.color}`}>
-                  {stat.value}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      <div className="grid md:grid-cols-3 gap-6 mt-10">
-        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white">
-          <CardContent className="pt-6">
-            <p className="text-blue-100">Keep up the great work!</p>
-            <p className="text-3xl font-bold mt-2">{stats.approved}</p>
-            <p className="text-blue-100">Tasks approved so far</p>
-          </CardContent>
-        </Card>
-
-        {stats.needsRevision > 0 && (
-          <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-            <CardContent className="pt-6">
-              <p className="text-orange-100">Action required</p>
-              <p className="text-3xl font-bold mt-2">{stats.needsRevision}</p>
-              <p className="text-orange-100">Tasks need revision</p>
-            </CardContent>
-          </Card>
-        )}
-
-        <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
-          <CardContent className="pt-6 text-center">
-            <p className="text-2xl font-bold">You're doing great!</p>
-            <Button variant="secondary" className="mt-4" onClick={() => navigate("/employee/tasks")}>
-              View All Tasks
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Tasks Table */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <DataTable
+          title="My Tasks"
+          columns={[
+            { key: "title", label: "Title" },
+            { key: "priority", label: "Priority" },
+            { key: "dueDate", label: "Due Date" },
+            { key: "status", label: "Status" },
+          ]}
+          data={tasks}
+        />
+      </motion.div>
     </div>
   );
-}
+};
+
+export default EmployeeDashboard;

@@ -1,3 +1,4 @@
+//frontend\src\services\projectService.js
 import api from "@/api/axios";
 
 /* -------------------------------------------------------------------------- */
@@ -13,13 +14,13 @@ import api from "@/api/axios";
  * Uses the new `/api/projects/my` endpoint (most common case).
  */
 export async function getMyProjects() {
-  try {
-    const { data } = await api.get("/projects/my");
-    return data;
-  } catch (error) {
-    throw new Error(error.response?.data?.message || "Failed to get my projects");
-  }
+  const { data } = await api.get("/projects/my");
+  return data.map(p => ({
+    ...p,
+    deadline: p.deadline ? new Date(p.deadline) : null
+  }));
 }
+
 
 /**
  * Admin-only – list **every** project in the system.
@@ -44,7 +45,10 @@ export async function getProjectById(projectId) {
  */
 export async function createProject(payload) {
   const { data } = await api.post("/projects", payload);
-  return data; // created Project
+  return {
+    ...data,
+    deadline: data.deadline ? new Date(data.deadline) : null,
+  };
 }
 
 /**
@@ -54,7 +58,10 @@ export async function createProject(payload) {
  */
 export async function updateProject(projectId, payload) {
   const { data } = await api.put(`/projects/${projectId}`, payload);
-  return data;
+  return {
+    ...data,
+    deadline: data.deadline ? new Date(data.deadline) : null,
+  };
 }
 
 /**
