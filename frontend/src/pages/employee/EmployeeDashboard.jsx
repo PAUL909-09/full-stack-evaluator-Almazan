@@ -1,101 +1,157 @@
-import React, { useEffect, useState } from "react";
-import MainLayout from "@/components/layout/MainLayout";
-import api from "@/api/axios";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
-import { authService } from "@/api/authService";
+/* eslint-disable no-unused-vars */
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import DataTable from "@/components/table/DataTable";
+import employeeService from "@/services/employeeService";
+import StatCard from "@/components/dashboard/StatCard";
+import { getStatusConfig } from "@/config/taskStatusConfig";
+import {
+  CheckCircle,
+  Clock,
+  Hourglass,
+  CheckSquare,
+  AlertTriangle,
+  XCircle,
+} from "lucide-react";
 
-export default function EmployeeDashboard() {
+const EmployeeDashboard = () => {
   const [tasks, setTasks] = useState([]);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const user = authService.getCurrentUser();
 
-  // Fetch employee’s tasks
+  // Load all data
   useEffect(() => {
-    if (!user) return;
-    async function fetchTasks() {
-      try {
-        const res = await api.get(`/tasks?assignedTo=${user.sub}`);
-        setTasks(res.data);
-      } catch (err) {
-        console.error("Error fetching tasks:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchTasks();
-  }, [user]);
+    loadData();
+  }, []);
 
-  // Update task status
-  async function handleStatusChange(taskId, newStatus) {
+  const loadData = async () => {
     try {
-      await api.patch(`/tasks/${taskId}/status`, { status: newStatus });
-      setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
-      );
-    } catch (err) {
-      console.error("Error updating status:", err);
-      alert("Failed to update status");
-    }
-  }
+      const [tasksRes, statsRes] = await Promise.all([
+        employeeService.getMyTasks(),
+        employeeService.getMyStats(),
+      ]);
 
-  if (loading) {
-    return (
-      <MainLayout>
-        <p>Loading your tasks...</p>
-      </MainLayout>
-    );
-  }
+      setTasks(tasksRes.data);
+      setStats(statsRes);
+    } catch (error) {
+      console.error("Dashboard load failed:", error);
+      setStats({});
+      setTasks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const statCards = [
+    {
+      label: "Total Tasks",
+      value: stats?.total || 0,
+      icon: CheckSquare,
+      color: "text-blue-600",
+    },
+    {
+      label: "To Do",
+      value: stats?.todo || 0,
+      icon: Clock,
+      color: "text-yellow-600",
+    },
+    {
+      label: "In Progress",
+      value: stats?.inProgress || 0,
+      icon: Hourglass,
+      color: "text-purple-600",
+    },
+    {
+      label: "Submitted",
+      value: stats?.submitted || 0,
+      icon: AlertTriangle,
+      color: "text-blue-500",
+    },
+    {
+      label: "Approved",
+      value: stats?.approved || 0,
+      icon: CheckCircle,
+      color: "text-green-600",
+    },
+    {
+      label: "Needs Revision",
+      value: stats?.needsRevision || 0,
+      icon: AlertTriangle,
+      color: "text-orange-500",
+    },
+    {
+      label: "Rejected",
+      value: stats?.rejected || 0,
+      icon: XCircle,
+      color: "text-red-600",
+    },
+  ];
 
   return (
-    <MainLayout>
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Employee Dashboard</h1>
-        {tasks.length === 0 ? (
-          <p className="text-gray-600">No tasks assigned yet.</p>
-        ) : (
-          <div className="grid gap-4">
-            {tasks.map((task) => (
-              <Card key={task.id} className="shadow-sm">
-                <CardHeader>
-                  <CardTitle>{task.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600 mb-3">
-                    Current Status:{" "}
-                    <span className="font-semibold text-blue-600">
-                      {task.status}
-                    </span>
-                  </p>
+    <div className="p-8 space-y-10">
+      {/* Header */}
+      <motion.h1
+        className="text-3xl font-bold text-[#0A66B3]"
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        Employee Dashboard
+      </motion.h1>
 
-                  <div className="flex gap-2 items-center">
-                    <select
-                      className="border px-3 py-2 rounded text-sm"
-                      value={task.status}
-                      onChange={(e) =>
-                        handleStatusChange(task.id, e.target.value)
-                      }
-                    >
-                      <option value="Pending">Pending</option>
-                      <option value="InProgress">InProgress</option>
-                      <option value="Completed">Completed</option>
-                    </select>
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        handleStatusChange(task.id, task.status)
-                      }
-                    >
-                      Update
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-5">
+        {statCards.map((card, index) => (
+          <motion.div
+            key={index}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.04 }}
+          >
+            <StatCard
+              icon={card.icon}
+              label={card.label}
+              value={card.value}
+              color={card.color}
+            />
+          </motion.div>
+        ))}
       </div>
-    </MainLayout>
+
+      {/* Tasks Table */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        <DataTable
+          title="My Tasks"
+          columns={[
+            { key: "title", label: "Title" },
+            { key: "deadline", label: "Deadline" },
+            { key: "status", label: "Status" },
+          ]}
+          data={tasks.map((task) => {
+            const statusConfig = getStatusConfig(task.status);
+            const StatusIcon = statusConfig.icon;
+            return {
+              ...task,
+              status: (
+                <span
+                  className={`inline-flex items-center text-xs font-semibold ${statusConfig.color.replace(
+                    "bg-",
+                    "text-"
+                  )}`}
+                >
+                  <StatusIcon className="w-4 h-4 mr-1" />
+                  {statusConfig.label}
+                </span>
+              ),
+              deadline: task.deadline ? new Date(task.deadline).toLocaleDateString() : "N/A",
+            };
+          })}
+        />
+      </motion.div>
+    </div>
   );
-}
+};
+
+export default EmployeeDashboard;

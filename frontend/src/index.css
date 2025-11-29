@@ -1,3 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+
+:root {
+    --success: #22c55e; /* Green */
+    --success-foreground: #ffffff; /* White text */
+    /* Add others as needed */
+  }

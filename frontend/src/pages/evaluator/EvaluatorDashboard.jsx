@@ -1,28 +1,122 @@
+// frontend/src/pages/Evaluator/EvaluatorDashboard.jsx
 import React, { useEffect, useState } from "react";
-import MainLayout from "@/components/layout/MainLayout";
 import api from "@/api/axios";
+import { Button } from "@/components/ui/button"; // For the new button
+import { toast } from "react-toastify";
+import StatCard from "@/components/dashboard/StatCard"; // Added import
+import {
+  Briefcase,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
+} from "lucide-react"; // Added icons
 
 export default function EvaluatorDashboard() {
-  const [evaluations, setEvaluations] = useState([]);
+  const [stats, setStats] = useState({
+    totalTasks: 0,
+    pendingEvaluations: 0,
+    approved: 0,
+    needsRevision: 0,
+    rejected: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/evaluations")
-      .then(res => setEvaluations(res.data))
-      .catch(console.error);
+    loadStats();
   }, []);
 
+  const loadStats = async () => {
+    try {
+      // Fetch all tasks (adjust if you have a dedicated stats endpoint)
+      const tasksRes = await api.get("/tasks");
+      const tasks = tasksRes.data;
+
+      // Fetch evaluations for each task (or batch if backend supports)
+      const evaluations = {};
+      for (const task of tasks) {
+        try {
+          const evalRes = await api.get(`/evaluations/${task.id}`); // Updated to match your backend route
+          evaluations[task.id] = evalRes.data;
+        } catch {
+          // Ignore if no evaluation
+        }
+      }
+
+      // Compute stats
+      const totalTasks = tasks.length;
+      const pendingEvaluations = tasks.filter(
+        (t) => t.status === "Submitted"
+      ).length;
+      const approved = Object.values(evaluations).filter(
+        (e) => e?.status === "Approved"
+      ).length;
+      const needsRevision = Object.values(evaluations).filter(
+        (e) => e?.status === "NeedsRevision"
+      ).length;
+      const rejected = Object.values(evaluations).filter(
+        (e) => e?.status === "Rejected"
+      ).length;
+
+      setStats({
+        totalTasks,
+        pendingEvaluations,
+        approved,
+        needsRevision,
+        rejected,
+      });
+    } catch (err) {
+      toast.error("Failed to load stats: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) return <div className="p-8">Loading dashboard stats…</div>;
+
   return (
-    <MainLayout>
-      <h1 className="text-2xl font-bold mb-4">Evaluator Dashboard</h1>
-      <div className="grid gap-3">
-        {evaluations.map(ev => (
-          <div key={ev.id} className="p-4 bg-white rounded shadow">
-            <div className="font-semibold">Task ID: {ev.taskId}</div>
-            <div className="text-sm text-gray-600">Score: {ev.score}</div>
-            <div className="text-sm text-gray-600">Comments: {ev.comments}</div>
-          </div>
-        ))}
+    <div className="p-8 max-w-6xl mx-auto">
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-4xl font-bold text-gray-800">
+          Evaluator Dashboard
+        </h1>
+        
       </div>
-    </MainLayout>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
+        <StatCard
+          icon={Briefcase}
+          label="Total Tasks"
+          value={stats.totalTasks}
+          color="text-gray-800"
+        />
+        <StatCard
+          icon={Clock}
+          label="Pending Evaluations"
+          value={stats.pendingEvaluations}
+          color="text-blue-600"
+        />
+        <StatCard
+          icon={CheckCircle2}
+          label="Approved"
+          value={stats.approved}
+          color="text-green-600"
+        />
+        <StatCard
+          icon={AlertTriangle}
+          label="Needs Revision"
+          value={stats.needsRevision}
+          color="text-orange-600"
+        />
+        <StatCard
+          icon={XCircle}
+          label="Rejected"
+          value={stats.rejected}
+          color="text-red-600"
+        />
+      </div>
+
+      {/* Add more sections here, e.g., recent evaluations or charts */}
+    </div>
   );
 }

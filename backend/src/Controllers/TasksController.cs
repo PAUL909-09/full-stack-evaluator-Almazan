@@ -1,92 +1,182 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Claims;
 using task_manager_api.Data;
+using task_manager_api.Dtos;
 using task_manager_api.Models;
+using task_manager_api.Services.Tasks;
+using System.Security.Claims;
 
-// Avoid TaskStatus conflict
-using ModelTaskStatus = task_manager_api.Models.TaskStatus;
-
-[ApiController]
-[Route("api/[controller]")]
-[Authorize]
-public class TasksController : ControllerBase
+namespace task_manager_api.Controllers
 {
-    private readonly ApplicationDbContext _db;
+    using TaskStatus = Models.TaskStatus;
 
-    public TasksController(ApplicationDbContext db)
+    [ApiController]
+    [Route("api/tasks")]
+    [Authorize]
+    public class TasksController : ControllerBase
     {
-        _db = db;
-    }
+        private readonly ApplicationDbContext _db;
+        private readonly ITaskService _taskService;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-    // --- ADMIN: Create Task ---
-    [HttpPost]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> CreateTask([FromBody] TaskItem t)
-    {
-        await _db.Tasks.AddAsync(t);
-        await _db.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetTask), new { id = t.Id }, t);
-    }
+        public TasksController(
+            ApplicationDbContext db,
+            ITaskService taskService,
+            IHttpContextAccessor httpContextAccessor)
+        {
+            _db = db;
+            _taskService = taskService;
+            _httpContextAccessor = httpContextAccessor;
+        }
 
-    // --- GET Single Task ---
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetTask(Guid id)
-    {
-        var task = await _db.Tasks.FindAsync(id);
-        if (task == null) return NotFound();
-        return Ok(task);
-    }
+        private (Guid userId, string role) GetCurrentUser()
+        {
+            var user = _httpContextAccessor.HttpContext!.User;
 
-    // --- ADMIN: Assign Task to Employee ---
-    [HttpPost("{id}/assign")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> AssignTask(Guid id, [FromBody] AssignDto dto)
-    {
-        var task = await _db.Tasks.FindAsync(id);
-        if (task == null) return NotFound();
+            var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? throw new UnauthorizedAccessException("User ID claim is missing.");
 
-        task.AssignedTo = dto.AssignedTo;
-        await _db.SaveChangesAsync();
-        return Ok();
-    }
+            var roleClaim = user.FindFirst(ClaimTypes.Role)?.Value ?? "";
 
-    // --- EMPLOYEE: Update Own Task Status ---
-    [HttpPatch("{id}/status")]
-    [Authorize(Roles = "Employee")] // Only employees can update their own tasks
-    public async Task<IActionResult> UpdateTaskStatus(Guid id, [FromBody] UpdateStatusDto dto)
-    {
-        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var task = await _db.Tasks.FindAsync(id);
-        if (task == null) return NotFound();
+            if (!Guid.TryParse(userIdClaim, out var userId))
+                throw new UnauthorizedAccessException("Invalid user ID in token.");
 
-        if (task.AssignedTo != userId)
-            return Forbid("You can only update your own tasks.");
+            return (userId, roleClaim);
+        }
 
-        task.Status = dto.Status;
-        await _db.SaveChangesAsync();
-        return Ok(task);
-    }
+        // Get all tasks (admin/evaluator view)
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var tasks = await _taskService.GetAllAsync();
+            return Ok(tasks);
+        }
 
-    // --- GET All Tasks ---
-    [HttpGet]
-    public async Task<IActionResult> GetTasks([FromQuery] Guid? assignedTo, [FromQuery] ModelTaskStatus? status)
-    {
-        var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-        var userRole = User.FindFirstValue(ClaimTypes.Role);
+        // Get a single task by ID
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(Guid id)
+        {
+            var task = await _taskService.GetByIdAsync(id);
+            return task == null ? NotFound("Task not found.") : Ok(task);
+        }
 
-        if (userRole != "Admin" && assignedTo != userId)
-            return Forbid();
+        // Get all tasks belonging to a specific project
+        [HttpGet("project/{projectId}")]
+        public async Task<IActionResult> GetByProject(Guid projectId)
+        {
+            var tasks = await _taskService.GetByProjectAsync(projectId);
+            return Ok(tasks);
+        }
 
-        var query = _db.Tasks.AsQueryable();
-        if (assignedTo.HasValue) query = query.Where(t => t.AssignedTo == assignedTo);
-        if (status.HasValue) query = query.Where(t => t.Status == status.Value);
+        // Get all employees assigned to tasks in a project (evaluator only)
+        [HttpGet("project/{projectId}/employees")]
+        [Authorize(Roles = "Evaluator")]
+        public async Task<IActionResult> GetEmployeesByProject(Guid projectId)
+        {
+            var (userId, _) = GetCurrentUser();
+            var employees = await _taskService.GetEmployeesByProjectAsync(projectId, userId);
+            return Ok(employees);
+        }
 
-        return Ok(await query.ToListAsync());
+        // Create a new task (evaluator only)
+        [HttpPost]
+        [Authorize(Roles = "Evaluator")]
+        public async Task<IActionResult> Create([FromBody] CreateTaskDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var (userId, _) = GetCurrentUser();
+
+            try
+            {
+                var task = await _taskService.CreateAsync(dto, userId);
+                return CreatedAtAction(nameof(GetById), new { id = task.Id }, task);
+            }
+            catch (ArgumentException ex) { return BadRequest(ex.Message); }
+            catch (UnauthorizedAccessException) { return Forbid("You can only create tasks for projects you own."); }
+            catch { return StatusCode(500, "An error occurred while creating the task."); }
+        }
+
+        // Update an existing task (evaluator only)
+        [HttpPut("{id}")]
+        [Authorize(Roles = "Evaluator")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateTaskDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var (userId, _) = GetCurrentUser();
+
+            try
+            {
+                var updated = await _taskService.UpdateAsync(id, dto, userId);
+                return updated == null ? NotFound("Task not found.") : Ok(updated);
+            }
+            catch (UnauthorizedAccessException) { return Forbid("You can only update tasks for projects you own."); }
+            catch (ArgumentException ex) { return BadRequest(ex.Message); }
+            catch { return StatusCode(500, "Failed to update task."); }
+        }
+
+        // Update task status (employee: submit, evaluator: approve/reject)
+        [HttpPut("{id}/status")]
+        [Authorize(Roles = "Employee,Evaluator")]
+        public async Task<IActionResult> UpdateStatus(Guid id, [FromBody] TaskStatusDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var (userId, role) = GetCurrentUser();
+
+            try
+            {
+                var task = await _taskService.UpdateStatusAsync(id, dto.Status, userId, role);
+                return task == null ? NotFound("Task not found.") : Ok(task);
+            }
+            catch (UnauthorizedAccessException) { return Forbid("You are not authorized to update this task's status."); }
+            catch (InvalidOperationException ex) { return BadRequest(ex.Message); }
+            catch { return StatusCode(500, "Failed to update task status."); }
+        }
+
+        // Delete a task (evaluator or admin)
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Evaluator,Admin")]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            try
+            {
+                var (userId, _) = GetCurrentUser();
+                var success = await _taskService.DeleteAsync(id, userId);
+                return success ? NoContent() : NotFound("Task not found or you don't have permission.");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+        // Get full history of actions performed on a task (audit trail)
+        [HttpGet("{id}/history")]
+        public async Task<IActionResult> GetHistory(Guid id)
+        {
+            var taskExists = await _db.Tasks.AnyAsync(t => t.Id == id);
+            if (!taskExists) return NotFound("Task not found.");
+
+            var history = await _db.TaskHistories
+                .Where(h => h.TaskId == id)
+                .Include(h => h.PerformedBy)
+                .OrderBy(h => h.PerformedAt)
+                .Select(h => new
+                {
+                    h.Id,
+                    h.Action,
+                    h.Comments,
+                    PerformedBy = h.PerformedBy != null
+                        ? new { h.PerformedBy.Id, h.PerformedBy.Name, h.PerformedBy.Email }
+                        : null,
+                    h.PerformedAt
+                })
+                .ToListAsync();
+
+            return Ok(history);
+        }
     }
 }
-
-// --- DTOs ---
-public record AssignDto(Guid AssignedTo);
-public record UpdateStatusDto(ModelTaskStatus Status);

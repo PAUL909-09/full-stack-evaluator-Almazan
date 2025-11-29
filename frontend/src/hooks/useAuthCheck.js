@@ -1,4 +1,4 @@
-// src/hooks/useAuthCheck.js
+// frontend/src/hooks/useAuthCheck.js
 import { useEffect } from "react";
 
 const useAuthCheck = () => {

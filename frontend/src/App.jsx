@@ -1,40 +1,60 @@
-// src/App.jsx
+// frontend/src/App.jsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
-import CreateTask from "./pages/admin/CreateTask";
-import { Toaster } from "@/components/ui/toaster";
-import { Protected, AdminOnly } from "./components/RouteGuards";  // ← Moved guards here
-import useAuthCheck from "./hooks/useAuthCheck";  // ← Added custom hook
+import useAuthCheck from "@/hooks/useAuthCheck";
+
+import { Protected } from "@/components/RouteGuards";
+import MainLayout from "@/components/layout/MainLayout";
+import Login from "@/pages/Login";
+import VerifyInvite from "@/pages/VerifyInvite";
+
+import AdminRoutes from "@/routes/AdminRoutes";
+import EvaluatorRoutes from "@/routes/EvaluatorRoutes";
+import EmployeeRoutes from "@/routes/EmployeeRoutes";
+
+// 🧩 Import react-toastify
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function App() {
-  useAuthCheck();  // ← Runs token expiration check on mount
+  useAuthCheck();
 
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public routes */}
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route path="/verify-invite" element={<VerifyInvite />} />
+
+        {/* Protected routes under MainLayout */}
         <Route
-          path="/dashboard"
           element={
             <Protected>
-              <Dashboard />
+              <MainLayout />
             </Protected>
           }
-        />
-        <Route
-          path="/admin/tasks/create"
-          element={
-            <AdminOnly>
-              <CreateTask />
-            </AdminOnly>
-          }
-        />
+        >
+          {AdminRoutes}
+          {EvaluatorRoutes}
+          {EmployeeRoutes}
+        </Route>
+
+        {/* Fallback */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
-      <Toaster />
+
+      <ToastContainer
+        position="top-right"
+        autoClose={2000}
+        hideProgressBar={false} // ✅ Ensures the progress bar (countdown) is visible
+        newestOnTop={true}
+        closeOnClick={true}
+        pauseOnHover={true} // ✅ Pauses the countdown on hover for better UX
+        draggable={true}
+        theme="light"
+        progressClassName="custom-progress-bar" // ✅ Custom class for styling the countdown bar
+      />
+
+     
     </BrowserRouter>
   );
 }
