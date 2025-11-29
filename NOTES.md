@@ -1,34 +1,113 @@
-# NOTES - Full-Stack Evaluator (Updated)
+# 🧪 Full-Stack Evaluator System — NOTES.md (Almazan)
 
-Added:
+> ⚡ **No Docker Required**  
+> Production-grade, role-based evaluation platform built with .NET + React.
 
-- JWT-based authentication with AuthService and AuthController
-- Role-based authorization on endpoints (e.g., Admin only for create/assign)
-- Register endpoint (no Admin role allowed)
-- Seeded single admin user (email: admin@example.com, pass: adminpassword)
-- Frontend: authService, Login/Register components, token storage/interceptor
-- Basic role checks in components
+---
 
-Missing / Next:
+## 🚀 What’s Implemented
 
-- Project entity/model (admin creates projects, assigns tasks to users in projects)
-- Comments feature (admin comments on tasks)
-- User status updates (users set status, admin sees)
-- Full frontend routing and protected routes
-- Adjust AssignedToUserId to perhaps Employee (since admin evaluates? Clarify if evaluators are separate)
+### 👥 **Role & Auth**
+- 🔐 Complete role system: **Admin**, **Evaluator**, **Employee**
+- 📧 Secure invite → OTP → verify → set password → login
+- 🔁 JWT auth + refresh token rotation
+- 🧹 Auto-cleanup of expired unverified accounts (background service)
 
-Assumptions:
+### 📁 **Projects & Tasks**
+- 📌 Full project + task management with deadlines
+- 📤 Secure proof uploads (PDF/JPG/PNG, max 5MB)
+- 📝 Task evaluation: **Approved**, **Needs Revision**, **Rejected**
+- 💬 Evaluator comments on submissions
+- 🕘 Complete task history audit trail
 
-- Only 1 admin (seeded; no register for admins)
-- Evaluators evaluate tasks assigned to them; adjust if admin is the evaluator
-- Simple token storage in localStorage (not secure for prod; use httpOnly cookies later)
+### 📊 **Admin Dashboard**
+- 📈 Analytics + charts
+- 🏆 Top performers
+- 👥 Bulk employee assignment (assign/replace multiple at once)
 
-How to run (dev):
+### 🎨 **Frontend**
+- ⚛️ Clean, minimal React (no Redux/Context — pure local state)
+- 🧭 Well-structured service layer
+- 📘 100% documented controllers, services, and frontend functions
 
-- Add Jwt:Secret to appsettings.json
-- Backend: dotnet restore && dotnet ef migrations add AddAuthSeeding && dotnet ef database update && dotnet run
-- Frontend: npm install react-router-dom && npm run dev
+---
 
-Testing:
+## 🧩 Future Scope / Missing (Intentional)
 
-- Register a user, login, create task (as admin), assign, evaluate (as evaluator)
+These are **nice-to-have enhancements**, *not blockers*:
+
+- 🧪 Unit + integration tests  
+- 📄 Pagination for large datasets  
+- 🔔 Real-time notifications (WebSocket / SignalR)  
+- 💌 Prettier email templates  
+- 🔧 CI/CD pipeline  
+- 🛡️ Rate limiting & structured logging  
+- 🟦 Optional migration to TypeScript  
+
+---
+
+## 🛠️ How to Test Your Changes (No Docker Needed)
+
+### 🐘 1. Install & Configure PostgreSQL
+- Install from official site
+- Create DB: `EvaluatorDB` (or your custom DB name)
+
+---
+
+### ⚙️ 2. Start Backend (.NET)
+
+```bash
+cd backend
+dotnet restore
+# Update your appsettings.Development.json connection string if required
+dotnet ef database update
+dotnet watch run
+````
+
+➡️ Open Swagger: **[https://localhost:7000/swagger](https://localhost:7000/swagger)**
+
+---
+
+### 💻 3. Start Frontend (React)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+➡️ Open: **[http://localhost:5173](http://localhost:5173)**
+
+---
+
+## 🧪 4. Testing Flow (Role-by-Role)
+
+### 👑 **Admin**
+
+* Invite Evaluators & Employees
+* User receives email OTP → verifies → sets password
+* Can view full analytics/dashboard
+
+### 🧑‍💼 **Evaluator**
+
+* Create project
+* Assign employees
+* Create tasks + deadlines
+* Review submitted tasks → Approve / Request Revision / Reject
+
+### 👷 **Employee**
+
+* View **My Tasks**
+* Update status: *Todo → In Progress → Done → Submitted*
+* Upload proof file (validated)
+
+---
+
+## ⚠️ 5. Edge Cases to Verify
+
+* ⏳ **Expired OTP** → account auto-deleted
+* 🔒 Unauthorized role access → **403** or redirect
+* 🗂️ Oversized upload (>5MB) → friendly error
+* 🚫 Editing others’ projects/tasks → blocked
+
+---
