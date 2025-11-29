@@ -232,7 +232,8 @@ export default function ProjectAnalytics() {
                       >
                         {pieData.map((entry, i) => {
                           const cfg = getStatusConfig(entry.status);
-                          return <Cell key={i} fill={cfg.hex} />; })}
+                          return <Cell key={i} fill={cfg.hex} />;
+                        })}
                       </Pie>
                       <Tooltip />
                     </PieChart>
