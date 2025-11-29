@@ -1,5 +1,3 @@
----
-
 # 🎨 Frontend – Full-Stack Evaluator System
 
 A **production-ready, fully documented React frontend** for the Evaluator platform.

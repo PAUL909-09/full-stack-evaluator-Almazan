@@ -1,5 +1,3 @@
----
-
 # 🖥️ Backend – Full-Stack Evaluator System
 
 **Clean • Secure • Fully Documented • No Docker Required**
