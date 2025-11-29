@@ -1,3 +1,5 @@
+// backend/src/Models/Evaluation.cs
+
 using System;
 using System.ComponentModel.DataAnnotations;
 
@@ -10,10 +12,14 @@ namespace task_manager_api.Models
 
         [Required]
         public Guid TaskId { get; set; }
+
+        // EF navigation - null! is correct here
         public TaskItem Task { get; set; } = null!;
 
         [Required]
         public Guid EvaluatorId { get; set; }
+
+        // EF navigation - null! is correct here
         public User Evaluator { get; set; } = null!;
 
         [Required]
@@ -25,7 +31,6 @@ namespace task_manager_api.Models
         public DateTime EvaluatedAt { get; set; } = DateTime.UtcNow;
     }
 
-    // keep this file for the enum, or move to a shared enums file
     public enum EvaluationStatus
     {
         Pending,

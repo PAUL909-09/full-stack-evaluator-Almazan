@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // frontend/src/components/modals/CreateProjectModal.jsx
 import { useEffect, useState } from "react";
 import api from "@/api/axios";
@@ -21,7 +22,7 @@ export default function CreateProjectModal({
   open, 
   onClose, 
   project, 
-  onSubmit   // ← We now use this
+  onSubmit 
 }) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -31,29 +32,36 @@ export default function CreateProjectModal({
 
   const isEdit = Boolean(project);
 
+  // SAFELY initialize form when modal opens
   useEffect(() => {
     if (open) {
       if (isEdit && project) {
-        setName(project.name || "");
-        setDescription(project.description || "");
+        // Convert any null/undefined to safe strings
+        setName(String(project.name ?? "").trim());
+        setDescription(String(project.description ?? "").trim());
         setDeadline(project.deadline ? new Date(project.deadline) : null);
       } else {
+        // Fresh form
         setName("");
         setDescription("");
         setDeadline(null);
       }
     }
-  }, [project, isEdit, open]);
+  }, [open, project, isEdit]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return toast.error("Project name is required");
+
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      return toast.error("Project name is required");
+    }
 
     try {
       setLoading(true);
 
       const payload = {
-        name: name.trim(),
+        name: trimmedName,
         description: description.trim() || null,
         evaluatorId: user.id,
         deadline: deadline ? deadline.toISOString() : null,
@@ -67,11 +75,11 @@ export default function CreateProjectModal({
         toast.success("Project created successfully!");
       }
 
-      // This is the KEY — pass data back
       onSubmit?.();
       onClose();
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to save project");
+      const message = err.response?.data?.message || "Failed to save project";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -85,16 +93,18 @@ export default function CreateProjectModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          onClick={onClose}
         >
           <motion.div
             className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl p-8"
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9, y: 20 }}
+            onClick={(e) => e.stopPropagation()}
           >
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 text-gray-500 hover:bg-gray-100 rounded-full p-2"
+              className="absolute top-4 right-4 text-gray-500 hover:bg-gray-100 rounded-full p-2 transition"
             >
               <X className="w-5 h-5" />
             </button>
@@ -105,8 +115,9 @@ export default function CreateProjectModal({
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <Label>Project Name *</Label>
+                <Label htmlFor="name">Project Name *</Label>
                 <Input
+                  id="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Mobile App Redesign"
@@ -116,8 +127,9 @@ export default function CreateProjectModal({
               </div>
 
               <div>
-                <Label>Description (Optional)</Label>
+                <Label htmlFor="description">Description (Optional)</Label>
                 <Input
+                  id="description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Brief overview..."
@@ -125,7 +137,6 @@ export default function CreateProjectModal({
                 />
               </div>
 
-              {/* FIXED: Beautiful, visible calendar */}
               <div>
                 <Label>Deadline (Optional)</Label>
                 <Popover>
@@ -156,7 +167,7 @@ export default function CreateProjectModal({
               <Button
                 type="submit"
                 disabled={loading || !name.trim()}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-6 text-lg rounded-xl"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-6 text-lg rounded-xl shadow-lg transition"
               >
                 {loading ? "Saving..." : isEdit ? "Update Project" : "Create Project"}
               </Button>

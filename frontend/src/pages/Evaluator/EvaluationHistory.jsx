@@ -3,17 +3,16 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import evaluationService from "@/services/evaluationService";
 import { useAuth } from "@/hooks/useAuth";
+
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import DataTable from "@/components/table/DataTable";
 import Badge from "@/components/ui/badge";
 import { toast } from "react-toastify";
 
-const statusColors = {
-  Approved: "bg-emerald-600",
-  NeedsRevision: "bg-orange-500",
-  Rejected: "bg-red-600",
-  Pending: "bg-blue-600",
-};
+import { History, ArrowLeft } from "lucide-react";
+
+// NEW: Use your centralized status configuration
+import { getStatusConfig } from "@/config/taskStatusConfig";
 
 export default function EvaluationHistory() {
   const navigate = useNavigate();
@@ -21,6 +20,7 @@ export default function EvaluationHistory() {
   const [evaluations, setEvaluations] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Auth check
   useEffect(() => {
     if (!authLoading && (!user || user.role !== "Evaluator")) {
       toast.error("Access denied. Evaluators only.");
@@ -29,17 +29,15 @@ export default function EvaluationHistory() {
     }
   }, [user, authLoading, navigate]);
 
+  // Load evaluation history
   useEffect(() => {
     if (authLoading || !user) return;
 
     const loadHistory = async () => {
       try {
-        console.log("Fetching history for user:", user); // DEBUG
         const data = await evaluationService.getMyEvaluationHistory();
-        console.log("Raw API response:", data); // SEE WHAT'S COMING BACK
-
         setEvaluations(data || []);
-        
+
         if (!data || data.length === 0) {
           toast.info("No evaluations yet. Try evaluating a submitted task!");
         }
@@ -54,67 +52,77 @@ export default function EvaluationHistory() {
     loadHistory();
   }, [authLoading, user]);
 
+  // Table columns
+  const columns = [
+    { key: "taskTitle", label: "Task Title" },
+    { key: "status", label: "Status" },
+    { key: "comments", label: "Comments" },
+    { key: "evaluatedAt", label: "Evaluated At" },
+  ];
+
+  // Map API result → DataTable-ready data
+  const mappedEvaluations = evaluations.map((evaluation) => {
+    const statusInfo = getStatusConfig(evaluation.status);
+    const StatusIcon = statusInfo.icon; // lucide-react icon
+
+    return {
+      ...evaluation,
+      status: (
+        <Badge className={`${statusInfo.color} text-white flex items-center gap-2 px-3 py-1`}>
+          <StatusIcon className="w-4 h-4" />
+          {statusInfo.label}
+        </Badge>
+      ),
+      comments: evaluation.comments || "—",
+      evaluatedAt: new Date(evaluation.evaluatedAt).toLocaleString(),
+    };
+  });
+
+  // Loading State
   if (authLoading || loading) {
-    return <div className="p-8 text-lg">Loading your evaluation history…</div>;
+    return (
+      <div className="p-8 bg-gradient-to-br from-[#F8FBFF] to-[#E9F4FF] rounded-2xl shadow-inner min-h-screen">
+        <div className="text-center py-20 text-gray-500 text-lg animate-pulse">
+          Loading your evaluation history...
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">My Evaluation History</h1>
-          <p className="text-muted-foreground mt-2">
-            Welcome back, <strong>{user?.name || "Evaluator"}</strong>! Here are all tasks you've evaluated.
-          </p>
+    <div className="p-8 bg-gradient-to-br from-[#F8FBFF] to-[#E9F4FF] rounded-2xl shadow-inner min-h-screen">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8">
+        <div className="flex items-center space-x-4">
+          <History className="h-10 w-10 text-[#0A66B3]" />
+          <div>
+            <h1 className="text-4xl font-bold text-[#0A66B3]">
+              My Evaluation History
+            </h1>
+            <p className="text-gray-600">Review all tasks you've evaluated</p>
+          </div>
         </div>
-        <Button onClick={() => navigate(-1)} variant="outline">
-          ← Back
+
+        <Button
+          onClick={() => navigate(-1)}
+          className="bg-gray-600 hover:bg-gray-700 text-white rounded-xl flex items-center gap-3 shadow-lg text-lg px-6 py-3"
+        >
+          <ArrowLeft className="h-6 w-6" />
+          Back
         </Button>
       </div>
 
-      {evaluations.length === 0 ? (
-        <Card className="p-10 text-center">
-          <p className="text-xl text-gray-500">
-            No evaluations found.
-          </p>
+      {/* Empty State */}
+      {mappedEvaluations.length === 0 ? (
+        <div className="text-center py-20">
+          <History className="h-20 w-20 text-gray-300 mx-auto mb-4" />
+          <p className="text-xl text-gray-500">No evaluations found.</p>
           <p className="text-sm text-gray-400 mt-4">
             Tip: Go to "Pending Tasks" and evaluate a submitted task first!
           </p>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {evaluations.map((evaluation) => (
-            <Card key={eval.evaluationId || evaluation.taskId} className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <CardTitle className="text-lg font-semibold">
-                    {evaluation.taskTitle}
-                  </CardTitle>
-                  <Badge className={`${statusColors[evaluation.status] || "bg-gray-500"} text-white`}>
-                    {evaluation.status}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-gray-600 line-clamp-2">
-                  {evaluation.taskDescription}
-                </p>
-
-                {evaluation.comments && (
-                  <div className="bg-gray-50 p-3 rounded-md">
-                    <p className="text-sm font-medium">Your Comments:</p>
-                    <p className="text-sm italic">"{evaluation.comments}"</p>
-                  </div>
-                )}
-
-                <div className="text-xs text-gray-500 space-y-1 pt-3 border-t">
-                  <p>Task ID: {evaluation.taskId}</p>
-                  <p>Evaluated: {new Date(evaluation.evaluatedAt).toLocaleString()}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
         </div>
+      ) : (
+        <DataTable title="Evaluation History" columns={columns} data={mappedEvaluations} />
       )}
     </div>
   );

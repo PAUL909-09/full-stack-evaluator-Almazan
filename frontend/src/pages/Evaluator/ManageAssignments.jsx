@@ -5,7 +5,11 @@ import { useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { getProjectById } from "@/services/projectService";
 import { getEmployees } from "@/services/userService";
-import { getAssignmentsByProject, assignEmployees, removeAssignment } from "@/services/projectAssignmentService";
+import {
+  getAssignmentsByProject,
+  assignEmployees,
+  removeAssignment,
+} from "@/services/projectAssignmentService";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import {
@@ -17,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "react-toastify";
 import { Users, Plus, Trash2, UserCheck, CheckCircle } from "lucide-react";
-import ConfirmModal from "@/components/ConfirmModal"; // Add this import
+import ConfirmModal from "@/components/modals/ConfirmModal"; // Add this import
 
 export default function ManageAssignments() {
   const { projectId } = useParams();
@@ -26,7 +30,11 @@ export default function ManageAssignments() {
   const [assignments, setAssignments] = useState([]);
   const [selectedEmployee, setSelectedEmployee] = useState("");
   const [loading, setLoading] = useState(true);
-  const [confirmModal, setConfirmModal] = useState({ open: false, assignmentId: null, employeeName: "" }); // Add state for modal
+  const [confirmModal, setConfirmModal] = useState({
+    open: false,
+    assignmentId: null,
+    employeeName: "",
+  }); // Add state for modal
 
   const loadAll = useCallback(async () => {
     try {
@@ -173,14 +181,17 @@ export default function ManageAssignments() {
                       </Select>
                       {unassignedEmployees.length === 0 && (
                         <p className="text-xs text-amber-600 mt-1">
-                          All available employees are already assigned to this project.
+                          All available employees are already assigned to this
+                          project.
                         </p>
                       )}
                     </div>
                     <Button
                       onClick={handleAssign}
                       className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg shadow-md transition duration-200"
-                      disabled={!selectedEmployee || unassignedEmployees.length === 0}
+                      disabled={
+                        !selectedEmployee || unassignedEmployees.length === 0
+                      }
                     >
                       <UserCheck className="mr-2 h-4 w-4" />
                       Assign Employee
@@ -226,8 +237,12 @@ export default function ManageAssignments() {
                               <div className="flex items-center gap-3">
                                 <CheckCircle className="h-5 w-5 text-green-600" />
                                 <div>
-                                  <p className="font-medium text-gray-800 dark:text-gray-200">{a.name}</p>
-                                  <p className="text-sm text-gray-600 dark:text-gray-400">{a.email}</p>
+                                  <p className="font-medium text-gray-800 dark:text-gray-200">
+                                    {a.name}
+                                  </p>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    {a.email}
+                                  </p>
                                 </div>
                               </div>
                               <Button

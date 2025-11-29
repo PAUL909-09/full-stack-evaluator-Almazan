@@ -155,3 +155,14 @@ export async function getEvaluatorProjects() {
   console.warn("getEvaluatorProjects() is deprecated – use getMyProjects()");
   return getMyProjects();
 }
+
+
+export const markProjectAsCompleted = async (projectId) => {
+  try {
+    const { data } = await api.patch(`/projects/${projectId}/complete`);
+    return data;
+  } catch (error) {
+    console.error("Failed to complete project:", error);
+    throw error.response?.data || error;
+  }
+};

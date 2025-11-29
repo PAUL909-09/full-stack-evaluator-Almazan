@@ -20,9 +20,9 @@ namespace task_manager_api.Controllers
         }
 
         private Guid CurrentUserId =>
-            Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                       ?? User.FindFirst("sub")?.Value 
-                       ?? throw new UnauthorizedAccessException());
+            Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? User.FindFirst("sub")?.Value
+                    ?? throw new UnauthorizedAccessException());
 
         private string CurrentUserRole =>
             User.FindFirst(ClaimTypes.Role)?.Value ?? string.Empty;
@@ -169,6 +169,20 @@ namespace task_manager_api.Controllers
             var success = await _projectService.AssignEmployeesAsync(id, dto.EmployeeIds, CurrentUserId);
             return success ? Ok() : NotFound();
         }
+        // Controllers/ProjectsController.cs
+        // In ProjectsController.cs — replace your CompleteProject method with THIS:
+[HttpPatch("{id:guid}/complete")]
+public async Task<IActionResult> CompleteProject(Guid id)
+{
+    var evaluatorId = CurrentUserId;
+
+    var success = await _projectService.CompleteProjectAsync(id, evaluatorId);
+
+    if (!success)
+        return NotFound(new { message = "Project not found or access denied" });
+
+    return Ok(new { message = "Project marked as completed!", completedAt = DateTime.UtcNow });
+}
 
         [HttpGet("{id}/assignments")]
         [Authorize(Roles = "Evaluator,Admin")]
@@ -178,4 +192,5 @@ namespace task_manager_api.Controllers
             return Ok(employees);
         }
     }
+    
 }

@@ -2,12 +2,12 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import evaluationService from "@/services/evaluationService";
-import { authService } from "@/services/authService";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Badge from "@/components/ui/badge";
-import ConfirmModal from "@/components/ConfirmModal";
+import ConfirmModal from "@/components/modals/ConfirmModal";
 import { toast } from "react-toastify";
+import { CheckCircle2, ArrowLeft } from "lucide-react"; // Added icons for header
 
 const statusColors = {
   Todo: "bg-gray-500",
@@ -107,28 +107,49 @@ export default function PendingEvaluations() {
   };
 
   if (loading || evaluationsLoading) {
-    return <div className="p-8">Loading evaluations…</div>;
+    return (
+      <div className="p-8 bg-gradient-to-br from-[#F8FBFF] to-[#E9F4FF] rounded-2xl shadow-inner min-h-screen">
+        <div className="text-center py-20 text-gray-500 text-lg animate-pulse">
+          Loading evaluations...
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Evaluations</h1>
-        <Button onClick={() => navigate(-1)} variant="outline">
-          ← Back
+    <div className="p-8 bg-gradient-to-br from-[#F8FBFF] to-[#E9F4FF] rounded-2xl shadow-inner min-h-screen">
+      <div className="flex justify-between items-center mb-8">
+        <div className="flex items-center space-x-4">
+          <CheckCircle2 className="h-10 w-10 text-[#0A66B3]" />
+          <div>
+            <h1 className="text-4xl font-bold text-[#0A66B3]">Evaluations</h1>
+            <p className="text-gray-600">Review and evaluate submitted tasks</p>
+          </div>
+        </div>
+
+        <Button
+          onClick={() => navigate(-1)}
+          className="bg-gray-600 hover:bg-gray-700 text-white rounded-xl flex items-center gap-3 shadow-lg text-lg px-6 py-3"
+        >
+          <ArrowLeft className="h-6 w-6" />
+          Back
         </Button>
       </div>
 
       {/* No tasks */}
       {tasks.length === 0 ? (
-        <p className="text-gray-500">No tasks requiring evaluation.</p>
+        <div className="text-center py-20">
+          <CheckCircle2 className="h-20 w-20 text-gray-300 mx-auto mb-4" />
+          <p className="text-xl text-gray-500">
+            No tasks requiring evaluation.
+          </p>
+        </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {tasks.map((task) => {
             const evaluation = evaluations[task.id];
             return (
-              <Card key={task.id} className="shadow-md">
+              <Card key={task.id} className="shadow-md bg-white rounded-xl">
                 <CardHeader>
                   <CardTitle className="text-lg">{task.title}</CardTitle>
                   <Badge className={`${statusColors[task.status]} text-white`}>
@@ -191,7 +212,7 @@ export default function PendingEvaluations() {
                       <Button
                         size="sm"
                         onClick={() => handleEvaluateClick(task.id)}
-                        className="w-full"
+                        className="w-full bg-blue-600 hover:bg-blue-700"
                       >
                         Update Evaluation
                       </Button>
@@ -200,7 +221,7 @@ export default function PendingEvaluations() {
                     <Button
                       size="sm"
                       onClick={() => handleEvaluateClick(task.id)}
-                      className="w-full"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700"
                     >
                       Evaluate
                     </Button>
@@ -282,3 +303,4 @@ export default function PendingEvaluations() {
     </div>
   );
 }
+

@@ -1,19 +1,26 @@
 // frontend/src/pages/Admin/AdminDashboard.jsx
 import { useEffect, useState } from "react";
 import adminService from "@/services/adminService";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-toastify";
-import { Users, FolderOpen, CheckSquare, TrendingUp, UserPlus } from "lucide-react";
+
+import StatCard from "@/components/dashboard/StatCard";
+
+import {
+  Users,
+  Briefcase,
+  CheckSquare,
+  UserPlus,
+  Clock,
+  ThumbsUp,
+  CheckCircle2,
+} from "lucide-react";
+
 import {
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
   Tooltip,
   Legend,
 } from "recharts";
@@ -22,44 +29,69 @@ const COLORS = ["#8b5cf6", "#3b82f6", "#10b981", "#f59e0b", "#ef4444"];
 
 export default function AdminDashboard() {
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true); // ← now used below
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    adminService
-      .getAdminAnalytics()
-      .then(setData)
-      .catch((err) => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+
+        const [analyticsData, projectsData] = await Promise.all([
+          adminService.getAdminAnalytics(),
+          adminService.getAllProjects(),
+        ]);
+
+        setData(analyticsData);
+        setProjects(projectsData || []);
+      } catch (err) {
         console.error(err);
-        toast.error("Failed to load admin analytics");
-      })
-      .finally(() => setLoading(false)); // ← using the loading state
+        toast.error("Failed to load dashboard data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
 
-  // Guard clauses – makes the component much more robust
   if (loading) {
     return (
-      <div className="p-8 text-center text-xl">Loading admin dashboard...</div>
+      <div className="flex items-center justify-center py-32 text-xl text-gray-400">
+        Loading system overview...
+      </div>
     );
   }
 
   if (!data) {
     return (
-      <div className="p-8 text-center text-red-600 text-xl">
-        Failed to load dashboard data. Is the backend running on http://localhost:5000?
+      <div className="text-center py-20 text-red-600 text-lg">
+        Backend not responding
       </div>
     );
   }
 
-  // Destructure only what we actually use
-  // (evalStats is returned by backend but not displayed yet → just ignore it)
-  const { summary, userStats, projectStats, taskStats } = data;
+  const { summary, userStats, taskStats } = data;
+
+  const completedProjects = projects.filter(
+    (p) => p.status === "Completed" || p.Status === "Completed"
+  ).length;
+
+  const totalProjects = projects.length || summary.totalProjects || 0;
+  const pendingApproval =
+    taskStats.find((s) => s.status === "Submitted")?.count || 0;
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-10">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-4xl font-bold text-gray-800">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2">System overview and analytics</p>
+          <h1 className="text-4xl font-bold text-gray-800">
+            Admin Command Center
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Real-time system health, task flow & operational metrics
+          </p>
         </div>
         <Button onClick={() => (window.location.href = "/admin/invite")}>
           <UserPlus className="w-5 h-5 mr-2" /> Invite User
@@ -67,107 +99,113 @@ export default function AdminDashboard() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        <StatCard icon={Users} label="Total Users" value={summary.totalUsers} color="text-violet-600" />
-        <StatCard icon={FolderOpen} label="Projects" value={summary.totalProjects} color="text-blue-600" />
-        <StatCard icon={CheckSquare} label="Tasks" value={summary.totalTasks} color="text-green-600" />
-        <StatCard icon={TrendingUp} label="Done Tasks" value={summary.doneTasks} color="text-orange-600" />
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+        <StatCard
+          icon={Users}
+          label="Total Users"
+          value={summary.totalUsers}
+          color="text-violet-600"
+        />
+
+        <StatCard
+          icon={Briefcase}
+          label="Total Projects"
+          value={totalProjects}
+          color="text-blue-600"
+        />
+
+        <StatCard
+          icon={CheckCircle2}
+          label="Completed Projects"
+          value={completedProjects}
+          color="text-emerald-600"
+          badge={
+            completedProjects === totalProjects && totalProjects > 0
+              ? "All Done!"
+              : null
+          }
+        />
+
+        <StatCard
+          icon={CheckSquare}
+          label="Total Tasks"
+          value={summary.totalTasks}
+          color="text-green-600"
+        />
+
+        <StatCard
+          icon={ThumbsUp}
+          label="Evaluations"
+          value={summary.totalEvaluations}
+          color="text-emerald-600"
+        />
+
+        <StatCard
+          icon={Clock}
+          label="Pending Approval"
+          value={pendingApproval}
+          color="text-orange-600"
+        />
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        {/* User Role Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>User Distribution by Role</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={userStats}
-                  dataKey="count"
-                  nameKey="role"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  label={({ role, count }) => `${role}: ${count}`}
-                >
-                  {userStats.map((_, i) => (
-                    <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {/* Charts */}
+      <div className="grid lg:grid-cols-3 gap-8">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+          <h3 className="text-lg font-semibold text-[#0A66B3] mb-4">
+            Current User Roles
+          </h3>
 
-        {/* Projects per Evaluator */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Projects per Evaluator</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={projectStats}>
-                <XAxis dataKey="evaluator" angle={-45} textAnchor="end" height={80} />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="projectCount" fill="#8b5cf6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+          <ResponsiveContainer width="100%" height={280}>
+            <PieChart>
+              <Pie
+                data={userStats}
+                dataKey="count"
+                nameKey="role"
+                cx="50%"
+                cy="50%"
+                outerRadius={90}
+                label={({ role, count }) => `${role}: ${count}`}
+              >
+                {userStats.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
 
-        {/* Task Status Breakdown */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Task Status Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={taskStats}
-                  dataKey="count"
-                  nameKey="status"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={120}
-                  label
-                >
-                  {taskStats.map((_, i) => (
-                    <Cell key={`cell-${i}`} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 lg:col-span-2">
+          <h3 className="text-lg font-semibold text-[#0A66B3] mb-4">
+            Task Lifecycle Status
+          </h3>
+
+          <ResponsiveContainer width="100%" height={280}>
+            <PieChart>
+              <Pie
+                data={taskStats}
+                dataKey="count"
+                nameKey="status"
+                cx="50%"
+                cy="50%"
+                innerRadius={70}
+                outerRadius={110}
+                label
+              >
+                {taskStats.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
-      <div className="text-center text-gray-500 text-sm">
-        Last updated: {new Date().toLocaleString()}
+      <div className="text-center text-gray-500 text-sm pt-8">
+        Last updated: {new Date().toLocaleString()} • Powered by .NET 9 + React + Vite
       </div>
     </div>
-  );
-}
-
-// Fixed: renamed parameter to avoid shadowing the imported Icon components
-function StatCard({ icon: IconComponent, label, value, color }) {
-  return (
-    <Card className="hover:shadow-lg transition-shadow">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-gray-600">{label}</CardTitle>
-        <IconComponent className={`w-6 h-6 ${color}`} />
-      </CardHeader>
-      <CardContent>
-        <div className={`text-3xl font-bold ${color}`}>{value}</div>
-      </CardContent>
-    </Card>
   );
 }

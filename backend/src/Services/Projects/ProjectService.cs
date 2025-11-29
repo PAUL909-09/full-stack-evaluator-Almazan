@@ -36,7 +36,7 @@ namespace task_manager_api.Services.Projects
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
-        public async Task<Project> CreateProjectAsync(string name, string description, Guid evaluatorId, DateTime? deadline = null)
+        public async Task<Project> CreateProjectAsync(string name, string? description, Guid evaluatorId, DateTime? deadline = null)
         {
             var project = new Project
             {
@@ -172,7 +172,22 @@ namespace task_manager_api.Services.Projects
                 .Where(t => t.ProjectId == projectId)
                 .ToListAsync();
         }
+        public async Task<bool> CompleteProjectAsync(Guid projectId, Guid evaluatorId)
+        {
+            var project = await _db.Projects
+                .FirstOrDefaultAsync(p => p.Id == projectId && p.EvaluatorId == evaluatorId);
 
+            if (project == null)
+                return false;
+
+            if (project.Status == "Completed")
+                return true; // Already completed → idempotent
+
+            project.Status = "Completed";
+
+            await _db.SaveChangesAsync();
+            return true;
+        }
 
     }
 }

@@ -21,7 +21,7 @@ namespace task_manager_api.Services.Projects
 
         Task<List<Project>> GetProjectsForUserAsync(Guid userId);
         Task<List<TaskItem>> GetTasksForProjectAsync(Guid projectId);
-
+        Task<bool> CompleteProjectAsync(Guid projectId, Guid evaluatorId);
 
     }
 }
