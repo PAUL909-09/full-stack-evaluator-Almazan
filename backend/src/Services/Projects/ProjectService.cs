@@ -18,6 +18,7 @@ namespace task_manager_api.Services.Projects
             _db = db;
         }
 
+        // Get all projects with evaluator and task details
         public async Task<IEnumerable<Project>> GetAllProjectsAsync()
         {
             return await _db.Projects
@@ -27,6 +28,7 @@ namespace task_manager_api.Services.Projects
                 .ToListAsync();
         }
 
+        // Get a single project by ID with full details
         public async Task<Project?> GetProjectByIdAsync(Guid id)
         {
             return await _db.Projects
@@ -36,6 +38,7 @@ namespace task_manager_api.Services.Projects
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
+        // Create a new project for the given evaluator
         public async Task<Project> CreateProjectAsync(string name, string? description, Guid evaluatorId, DateTime? deadline = null)
         {
             var project = new Project
@@ -51,6 +54,7 @@ namespace task_manager_api.Services.Projects
             return project;
         }
 
+        // Update project details (name, description, deadline) — evaluator only
         public async Task<Project?> UpdateProjectAsync(Guid id, string? name, string? description, Guid evaluatorId, DateTime? deadline = null)
         {
             var project = await _db.Projects.FindAsync(id);
@@ -65,18 +69,19 @@ namespace task_manager_api.Services.Projects
             return project;
         }
 
+        // Delete a project — evaluator only
         public async Task<bool> DeleteProjectAsync(Guid id, Guid evaluatorId)
         {
             var project = await _db.Projects.FindAsync(id);
             if (project == null || project.EvaluatorId != evaluatorId)
-                return false; // Caller handles response
+                return false;
 
             _db.Projects.Remove(project);
             await _db.SaveChangesAsync();
             return true;
         }
 
-        // In GetUserProjectsAsync
+        // Get all projects the user is involved in (as evaluator or assigned employee)
         public async Task<IEnumerable<Project>> GetUserProjectsAsync(Guid userId)
         {
             return await _db.Projects
@@ -84,9 +89,10 @@ namespace task_manager_api.Services.Projects
                 .Include(p => p.Evaluator)
                 .Include(p => p.Tasks)
                     .ThenInclude(t => t.AssignedTo)
-                .ToListAsync(); // ← This returns FULL Project → Deadline IS included!
+                .ToListAsync();
         }
 
+        // Get all projects owned by a specific evaluator
         public async Task<IEnumerable<Project>> GetProjectsByEvaluatorAsync(Guid evaluatorId)
         {
             return await _db.Projects
@@ -97,10 +103,7 @@ namespace task_manager_api.Services.Projects
                 .ToListAsync();
         }
 
-
-        // ───────────────────────────────────────────────
-        // ASSIGN EMPLOYEES TO A PROJECT
-        // ───────────────────────────────────────────────
+        // Assign/replace employees to a project (admin or project evaluator only)
         public async Task<bool> AssignEmployeesAsync(Guid projectId, List<Guid> employeeIds, Guid currentUserId)
         {
             var project = await _db.Projects
@@ -113,14 +116,11 @@ namespace task_manager_api.Services.Projects
             var currentUser = await _db.Users.FindAsync(currentUserId);
             var isAdmin = currentUser?.Role == Role.Admin;
 
-            // Evaluator can only assign to their own projects
             if (!isAdmin && project.EvaluatorId != currentUserId)
                 return false;
 
-            // Remove all existing assignments
             _db.ProjectAssignments.RemoveRange(project.AssignedEmployees);
 
-            // Add new ones
             foreach (var empId in employeeIds.Distinct())
             {
                 var employee = await _db.Users.FindAsync(empId);
@@ -137,9 +137,8 @@ namespace task_manager_api.Services.Projects
             await _db.SaveChangesAsync();
             return true;
         }
-        // ───────────────────────────────────────────────
-        // GET EMPLOYEES ASSIGNED TO A PROJECT
-        // ───────────────────────────────────────────────
+
+        // Get all employees currently assigned to a project
         public async Task<IEnumerable<EmployeeDto>> GetAssignedEmployeesAsync(Guid projectId)
         {
             var employees = await _db.ProjectAssignments
@@ -154,7 +153,7 @@ namespace task_manager_api.Services.Projects
             return employees;
         }
 
-
+        // Get all projects a specific user is involved in (admin view)
         public async Task<List<Project>> GetProjectsForUserAsync(Guid userId)
         {
             return await _db.Projects
@@ -165,6 +164,7 @@ namespace task_manager_api.Services.Projects
                 .ToListAsync();
         }
 
+        // Get all tasks in a specific project (with assignee)
         public async Task<List<TaskItem>> GetTasksForProjectAsync(Guid projectId)
         {
             return await _db.Tasks
@@ -172,6 +172,8 @@ namespace task_manager_api.Services.Projects
                 .Where(t => t.ProjectId == projectId)
                 .ToListAsync();
         }
+
+        // Mark a project as completed (evaluator only, idempotent)
         public async Task<bool> CompleteProjectAsync(Guid projectId, Guid evaluatorId)
         {
             var project = await _db.Projects
@@ -181,13 +183,11 @@ namespace task_manager_api.Services.Projects
                 return false;
 
             if (project.Status == "Completed")
-                return true; // Already completed → idempotent
+                return true;
 
             project.Status = "Completed";
-
             await _db.SaveChangesAsync();
             return true;
         }
-
     }
 }

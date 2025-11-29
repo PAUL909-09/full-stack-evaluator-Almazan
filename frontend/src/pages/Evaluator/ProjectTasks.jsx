@@ -5,7 +5,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { tasksService } from "@/services/tasksService";
 import { authService } from "@/services/authService";
 
-// shadcn/ui components (JSX versions)
 import {
   Table,
   TableHeader,

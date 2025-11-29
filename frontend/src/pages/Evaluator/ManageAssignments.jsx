@@ -1,7 +1,6 @@
-// frontend/src/pages/Evaluator/ManageAssignments.jsx
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
-// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 import { getProjectById } from "@/services/projectService";
 import { getEmployees } from "@/services/userService";

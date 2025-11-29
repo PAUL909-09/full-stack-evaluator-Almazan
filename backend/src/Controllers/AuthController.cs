@@ -5,7 +5,6 @@ using task_manager_api.Models;
 using task_manager_api.Helpers;
 using task_manager_api.Data;
 
-
 namespace task_manager_api.Controllers
 {
     [ApiController]
@@ -23,9 +22,7 @@ namespace task_manager_api.Controllers
             _config = config;
         }
 
-        // =============================================================
-        // 🧩 LOGIN
-        // =============================================================
+        // User login - returns access + refresh tokens
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
@@ -56,10 +53,7 @@ namespace task_manager_api.Controllers
             });
         }
 
-
-        // =============================================================
-        // 📩 INVITE USER
-        // =============================================================
+        // Send invitation email with OTP to new user
         [HttpPost("invite")]
         public async Task<IActionResult> Invite([FromBody] InviteRequestDto dto)
         {
@@ -85,9 +79,7 @@ namespace task_manager_api.Controllers
             }
         }
 
-        // =============================================================
-        // 🧩 VERIFY INVITE
-        // =============================================================
+        // Verify OTP from invite email and set user's password
         [HttpPost("verify-invite")]
         public async Task<IActionResult> VerifyInvite([FromBody] VerifyInviteDto dto)
         {
@@ -109,9 +101,7 @@ namespace task_manager_api.Controllers
             }
         }
 
-        // =============================================================
-        // 🔑 SET PASSWORD
-        // =============================================================
+        // Allow invited user to set password using email (fallback/alternative flow)
         [HttpPost("set-password")]
         public async Task<IActionResult> SetPassword([FromBody] SetPasswordDto dto)
         {
@@ -122,9 +112,7 @@ namespace task_manager_api.Controllers
             return Ok(new { Message = "Password set successfully. You may now log in." });
         }
 
-        // =============================================================
-        // DTOs
-        // =============================================================
+        // DTOs for authentication endpoints
         public record LoginDto(string Email, string Password);
         public record InviteRequestDto(string? Name, string Email, Role? Role);
         public record VerifyInviteDto(string Email, string OtpCode, string Password);

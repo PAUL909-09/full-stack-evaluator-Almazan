@@ -16,11 +16,9 @@ namespace task_manager_api.Models
         public Role Role { get; set; } = Role.Employee;
         public bool IsEmailVerified { get; set; }
 
-        // ✅ For OTP Verification
         public string? OtpCode { get; set; }
         public DateTime? OtpExpiresAt { get; set; }
 
-        // ✅ NEW: Refresh Token Support
         public string? RefreshToken { get; set; }
         public DateTime? RefreshTokenExpiry { get; set; }
 

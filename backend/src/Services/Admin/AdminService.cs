@@ -20,7 +20,7 @@ namespace task_manager_api.Services
             _context = context;
         }
 
-        // SIMPLE DASHBOARD SUMMARY
+        // Get basic dashboard stats (users, projects, completed tasks)
         public async Task<DashboardStats> GetDashboardStatsAsync()
         {
             var totalUsers = await _context.Users.CountAsync();
@@ -97,7 +97,7 @@ namespace task_manager_api.Services
             };
         }
 
-        // PENDING INVITES
+        // Get all pending user invitations (not yet verified)
         public async Task<List<PendingInvite>> GetPendingInvitesAsync()
         {
             return await _context.Users
@@ -113,25 +113,7 @@ namespace task_manager_api.Services
                 .ToListAsync();
         }
 
-        // NEW: MAIN ADMIN ANALYTICS ENDPOINT
-        // public async Task<AdminAnalyticsDto> GetAdminAnalyticsAsync()
-        // {
-        //     return new AdminAnalyticsDto
-        //     {
-        //         TotalUsers = await _context.Users.CountAsync(),
-        //         TotalProjects = await _context.Projects.CountAsync(),
-        //         TotalTasks = await _context.Tasks.CountAsync(),
-
-        //         TodoTasks = await _context.Tasks.CountAsync(t => t.Status == TaskStatusEnum.Todo),
-        //         InProgressTasks = await _context.Tasks.CountAsync(t => t.Status == TaskStatusEnum.InProgress),
-        //         DoneTasks = await _context.Tasks.CountAsync(t => t.Status == TaskStatusEnum.Done),
-
-        //         ApprovedTasks = await _context.Tasks.CountAsync(t => t.Status == TaskStatusEnum.Approved),
-        //         NeedsRevisionTasks = await _context.Tasks.CountAsync(t => t.Status == TaskStatusEnum.NeedsRevision),
-        //         RejectedTasks = await _context.Tasks.CountAsync(t => t.Status == TaskStatusEnum.Rejected),
-        //         SubmittedTasks = await _context.Tasks.CountAsync(t => t.Status == TaskStatusEnum.Submitted)
-        //     };
-        // }
+        // Get detailed admin analytics (users, tasks, projects, evaluations by status)
         public async Task<object> GetAdminAnalyticsAsync()
         {
             var evaluators = await _context.Users
@@ -209,12 +191,6 @@ namespace task_manager_api.Services
                 employeeDetails = employees
             };
         }
-
-
-        // backend/src/Services/Admin/AdminService.cs
-        // backend/src/Services/Admin/AdminService.cs
-
-        // backend/src/Services/Admin/AdminService.cs
 
         public async Task<object> GetProjectAnalyticsAsync()
         {

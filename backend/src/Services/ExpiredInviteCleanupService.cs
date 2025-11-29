@@ -6,20 +6,23 @@ using task_manager_api.Data;
 
 namespace task_manager_api.Services
 {
+    /// <summary>
+    /// Background service that automatically removes expired unverified user invites
+    /// </summary>
     public class ExpiredInviteCleanupService : IHostedService, IDisposable
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILogger<ExpiredInviteCleanupService> _logger;
         private Timer? _timer;
-        private readonly TimeSpan _interval;
+        private readonly TimeSpan _interval = TimeSpan.FromMinutes(1); // Runs every minute
 
         public ExpiredInviteCleanupService(IServiceScopeFactory scopeFactory, ILogger<ExpiredInviteCleanupService> logger)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
-            _interval = TimeSpan.FromMinutes(1); // runs every minute; adjust as needed
         }
 
+        // Starts the background cleanup timer
         public Task StartAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("ExpiredInviteCleanupService started.");
@@ -27,6 +30,7 @@ namespace task_manager_api.Services
             return Task.CompletedTask;
         }
 
+        // Runs cleanup: deletes all unverified users with expired OTPs
         private async void DoWork(object? state)
         {
             try
@@ -51,6 +55,7 @@ namespace task_manager_api.Services
             }
         }
 
+        // Stops the cleanup timer gracefully
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("ExpiredInviteCleanupService stopping.");
@@ -58,6 +63,7 @@ namespace task_manager_api.Services
             return Task.CompletedTask;
         }
 
+        // Disposes the timer
         public void Dispose() => _timer?.Dispose();
     }
 }

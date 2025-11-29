@@ -1,4 +1,4 @@
-// frontend/src/pages/Admin/Users/UserAnalytics.jsx
+/* eslint-disable no-unused-vars */
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import adminService from "@/services/adminService";
@@ -333,7 +333,6 @@ export default function UserAnalytics() {
   );
 }
 
-// Reusable components
 function Section({ title, gradient, children }) {
   return (
     <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden">

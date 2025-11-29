@@ -1,35 +1,26 @@
 // frontend/src/services/userService.js
 import api from "@/api/axios";
 
-/** Get all employees (Admin or Evaluator) */
+/**
+ * Get all employees (used by Admin & Evaluator for assignment dropdowns)
+ */
 export async function getEmployees() {
-  try {
-    const { data } = await api.get("/users?role=Employee");
-    return data;
-  } catch (error) {
-    console.error(error);
-    throw new Error(error.response?.data?.message || "Failed to fetch employees");
-  }
+  const { data } = await api.get("/users?role=Employee");
+  return data;
 }
 
-/** Get all users (Admin only) */
+/**
+ * Get all users in the system (Admin only)
+ */
 export async function getAllUsers() {
-  try {
-    const { data } = await api.get("/users?role="); // optional: Admin can filter later
-    return data;
-  } catch (error) {
-    console.error(error);
-    throw new Error(error.response?.data?.message || "Failed to fetch users");
-  }
+  const { data } = await api.get("/users");
+  return data;
 }
 
-/** Get single user by ID */
+/**
+ * Get a single user by ID (public profile)
+ */
 export async function getUserById(userId) {
-  try {
-    const { data } = await api.get(`/users/${userId}`);
-    return data;
-  } catch (error) {
-    console.error(error);
-    throw new Error(error.response?.data?.message || "Failed to fetch user");
-  }
+  const { data } = await api.get(`/users/${userId}`);
+  return data;
 }

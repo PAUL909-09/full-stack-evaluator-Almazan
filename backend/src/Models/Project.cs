@@ -16,7 +16,7 @@ namespace task_manager_api.Models
         public string Status { get; set; } = "Pending";
 
         [JsonPropertyName("deadline")]
-        public DateTime? Deadline { get; set; }  // ← CLEAN & WORKING
+        public DateTime? Deadline { get; set; } 
 
         public Guid EvaluatorId { get; set; }
         public User Evaluator { get; set; } = null!;

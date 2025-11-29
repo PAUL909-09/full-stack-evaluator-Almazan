@@ -32,22 +32,20 @@ namespace task_manager_api.Models
 
         public DateTime? Deadline { get; set; }
 
-        // Foreign Keys
         public Guid ProjectId { get; set; }
         public Project Project { get; set; } = null!;
 
-        public Guid CreatedById { get; set; }   // Evaluator
+        public Guid CreatedById { get; set; }   
         public User CreatedBy { get; set; } = null!;
 
-        public Guid AssignedToId { get; set; }  // Employee
+        public Guid AssignedToId { get; set; } 
         public User AssignedTo { get; set; } = null!;
 
-        // Relationships
         public List<Comment> Comments { get; set; } = new();
-        public Evaluation? Evaluation { get; set; }  // One-to-one
-        public ICollection<TaskHistory> History { get; set; } = new List<TaskHistory>(); // One-to-many
+        public Evaluation? Evaluation { get; set; }  
+        public ICollection<TaskHistory> History { get; set; } = new List<TaskHistory>(); 
 
-        public DateTime? SubmittedAt { get; set; }  // Nullable, set only on submission
-        public string? ProofFilePath { get; set; }   // Path to the uploaded file   
+        public DateTime? SubmittedAt { get; set; }  
+        public string? ProofFilePath { get; set; }   
     }
 }

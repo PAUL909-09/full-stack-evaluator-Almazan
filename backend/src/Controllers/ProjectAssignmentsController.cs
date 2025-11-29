@@ -9,7 +9,7 @@ namespace task_manager_api.Controllers
 {
     [ApiController]
     [Route("api/projectassignments")]
-    [Authorize]
+    [Authorize] // All endpoints require authentication
     public class ProjectAssignmentsController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
@@ -24,9 +24,7 @@ namespace task_manager_api.Controllers
         private bool IsAdmin => CurrentUserRole == "Admin";
         private bool IsEvaluator => CurrentUserRole == "Evaluator";
 
-        // --------------------------------------------------------------------
-        // GET /api/projectassignments/project/{projectId}
-        // --------------------------------------------------------------------
+        // Get all employees assigned to a specific project
         [HttpGet("project/{projectId}")]
         public async Task<IActionResult> GetByProject(Guid projectId)
         {
@@ -50,9 +48,7 @@ namespace task_manager_api.Controllers
             return Ok(employees);
         }
 
-        // --------------------------------------------------------------------
-        // POST /api/projectassignments
-        // --------------------------------------------------------------------
+        // Assign one or more employees to a project (idempotent - skips duplicates)
         [HttpPost]
         [Authorize(Roles = "Evaluator,Admin")]
         public async Task<IActionResult> Assign([FromBody] AssignRequest request)
@@ -66,7 +62,6 @@ namespace task_manager_api.Controllers
             if (!IsAdmin && project.EvaluatorId != CurrentUserId)
                 return Forbid("You are not allowed to modify this project.");
 
-            // Remove duplicates
             var alreadyAssigned = await _db.ProjectAssignments
                 .Where(pa => pa.ProjectId == request.ProjectId)
                 .Select(pa => pa.UserId)
@@ -87,9 +82,7 @@ namespace task_manager_api.Controllers
             return Ok("Employees assigned successfully.");
         }
 
-        // --------------------------------------------------------------------
-        // DELETE /api/projectassignments/{id}
-        // --------------------------------------------------------------------
+        // Remove an employee from a project (by assignment ID)
         [HttpDelete("{id}")]
         [Authorize(Roles = "Evaluator,Admin")]
         public async Task<IActionResult> Remove(Guid id)
@@ -109,7 +102,7 @@ namespace task_manager_api.Controllers
             return NoContent();
         }
 
-        // DTO
+        // Request DTO for assigning employees to a project
         public class AssignRequest
         {
             public Guid ProjectId { get; set; }

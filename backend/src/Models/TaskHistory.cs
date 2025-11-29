@@ -8,11 +8,11 @@ namespace task_manager_api.Models
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        public Guid? TaskId { get; set; } // Changed to nullable, removed [Required]
-        public TaskItem? Task { get; set; } // Changed to nullableTaskItem
+        public Guid? TaskId { get; set; } 
+        public TaskItem? Task { get; set; } 
 
         [Required]
-        public string Action { get; set; } = string.Empty; // e.g., "Created", "Approved", "NeedsRevision", "Rejected"
+        public string Action { get; set; } = string.Empty; 
 
         [MaxLength(1000)]
         public string? Comments { get; set; }

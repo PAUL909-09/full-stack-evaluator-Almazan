@@ -1,4 +1,4 @@
-// frontend/src/components/modals/UserDetailsModal.jsx
+/* eslint-disable no-unused-vars */
 import React from "react";
 import { motion } from "framer-motion";
 import { X, CheckCircle2, AlertCircle, Calendar } from "lucide-react";

@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using task_manager_api.Services.Projects;
-using task_manager_api.DTOs.Projects; // ← This brings in your real DTOs with Deadline
+using task_manager_api.DTOs.Projects;
 using System.Security.Claims;
 
 namespace task_manager_api.Controllers
@@ -30,7 +30,7 @@ namespace task_manager_api.Controllers
         private bool IsAdmin => CurrentUserRole == "Admin";
         private bool IsEvaluator => CurrentUserRole == "Evaluator";
 
-        // GET /api/projects
+        // Get all projects (admin sees all, evaluator sees only theirs)
         [HttpGet]
         [Authorize(Roles = "Admin,Evaluator")]
         public async Task<IActionResult> GetAll()
@@ -42,65 +42,56 @@ namespace task_manager_api.Controllers
             return Ok(projects);
         }
 
-        // GET /api/projects/{id}
+        // Get a single project by ID (with access control)
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(Guid id)
         {
             var project = await _projectService.GetProjectByIdAsync(id);
-            if (project == null)
-                return NotFound("Project not found.");
+            if (project == null) return NotFound("Project not found.");
 
-            if (!IsAdmin &&
-                project.EvaluatorId != CurrentUserId &&
-                !project.Tasks.Any(t => t.AssignedToId == CurrentUserId))
-            {
+            if (!IsAdmin && project.EvaluatorId != CurrentUserId && !project.Tasks.Any(t => t.AssignedToId == CurrentUserId))
                 return Forbid("Access denied.");
-            }
 
             return Ok(project);
         }
 
-        // POST /api/projects
+        // Create a new project (evaluator only)
         [HttpPost]
         [Authorize(Roles = "Evaluator")]
         public async Task<IActionResult> Create([FromBody] CreateProjectDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var project = await _projectService.CreateProjectAsync(
                 name: dto.Name,
                 description: dto.Description ?? string.Empty,
                 evaluatorId: CurrentUserId,
-                deadline: dto.Deadline  // ← NOW WORKS! Deadline is in DTO
+                deadline: dto.Deadline
             );
 
             return CreatedAtAction(nameof(GetById), new { id = project.Id }, project);
         }
 
-        // PUT /api/projects/{id}
+        // Update an existing project (evaluator only)
         [HttpPut("{id}")]
         [Authorize(Roles = "Evaluator")]
         public async Task<IActionResult> Update(Guid id, [FromBody] UpdateProjectDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            if (!ModelState.IsValid) return BadRequest(ModelState);
 
             var project = await _projectService.UpdateProjectAsync(
                 id: id,
                 name: dto.Name,
                 description: dto.Description,
                 evaluatorId: CurrentUserId,
-                deadline: dto.Deadline  // ← NOW WORKS!
+                deadline: dto.Deadline
             );
 
-            if (project == null)
-                return NotFound("Project not found or access denied.");
-
+            if (project == null) return NotFound("Project not found or access denied.");
             return Ok(project);
         }
 
-        // DELETE /api/projects/{id}
+        // Delete a project (evaluator only)
         [HttpDelete("{id}")]
         [Authorize(Roles = "Evaluator")]
         public async Task<IActionResult> Delete(Guid id)
@@ -109,7 +100,7 @@ namespace task_manager_api.Controllers
             return success ? NoContent() : NotFound();
         }
 
-        // GET /api/projects/my
+        // Get all projects the current user is involved in (evaluator or employee)
         [HttpGet("my")]
         [Authorize(Roles = "Evaluator,Employee")]
         public async Task<IActionResult> GetMyProjects()
@@ -118,7 +109,7 @@ namespace task_manager_api.Controllers
             return Ok(projects);
         }
 
-        // GET /api/projects/user/{userId} (Admin)
+        // Admin: Get all projects assigned to a specific user
         [HttpGet("user/{userId}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetUserProjects(string userId)
@@ -139,7 +130,7 @@ namespace task_manager_api.Controllers
             return Ok(result);
         }
 
-        // GET /api/projects/admin/{projectId}/assignments (Admin)
+        // Admin: Get task assignments in a project (who is doing what)
         [HttpGet("admin/{projectId}/assignments")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetProjectAssignments(string projectId)
@@ -162,6 +153,7 @@ namespace task_manager_api.Controllers
             return Ok(result);
         }
 
+        // Assign employees to a project (evaluator or admin)
         [HttpPost("{id}/assign")]
         [Authorize(Roles = "Evaluator,Admin")]
         public async Task<IActionResult> AssignEmployees(Guid id, [FromBody] AssignEmployeesDto dto)
@@ -169,21 +161,20 @@ namespace task_manager_api.Controllers
             var success = await _projectService.AssignEmployeesAsync(id, dto.EmployeeIds, CurrentUserId);
             return success ? Ok() : NotFound();
         }
-        // Controllers/ProjectsController.cs
-        // In ProjectsController.cs — replace your CompleteProject method with THIS:
-[HttpPatch("{id:guid}/complete")]
-public async Task<IActionResult> CompleteProject(Guid id)
-{
-    var evaluatorId = CurrentUserId;
 
-    var success = await _projectService.CompleteProjectAsync(id, evaluatorId);
+        // Mark a project as completed (evaluator only)
+        [HttpPatch("{id:guid}/complete")]
+        public async Task<IActionResult> CompleteProject(Guid id)
+        {
+            var success = await _projectService.CompleteProjectAsync(id, CurrentUserId);
 
-    if (!success)
-        return NotFound(new { message = "Project not found or access denied" });
+            if (!success)
+                return NotFound(new { message = "Project not found or access denied" });
 
-    return Ok(new { message = "Project marked as completed!", completedAt = DateTime.UtcNow });
-}
+            return Ok(new { message = "Project marked as completed!", completedAt = DateTime.UtcNow });
+        }
 
+        // Get all employees assigned to a project
         [HttpGet("{id}/assignments")]
         [Authorize(Roles = "Evaluator,Admin")]
         public async Task<IActionResult> GetAssignments(Guid id)
@@ -192,5 +183,4 @@ public async Task<IActionResult> CompleteProject(Guid id)
             return Ok(employees);
         }
     }
-    
 }

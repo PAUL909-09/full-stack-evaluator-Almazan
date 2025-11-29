@@ -9,7 +9,7 @@ namespace task_manager_api.Controllers
 {
     [ApiController]
     [Route("api/users")]
-    [Authorize] // Any authenticated user
+    [Authorize] // All endpoints require authentication
     public class UsersController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -21,33 +21,30 @@ namespace task_manager_api.Controllers
 
         private string CurrentUserRole => User.FindFirst(ClaimTypes.Role)?.Value ?? "";
 
-        // GET /api/users?role=Employee
+        // Get users filtered by role (e.g., ?role=Employee) — Admin & Evaluator only
         [HttpGet]
         public async Task<IActionResult> GetUsersByRole([FromQuery] string? role)
         {
             if (string.IsNullOrEmpty(role))
                 return BadRequest(new { message = "Role query parameter is required." });
 
-            // Only Admin or Evaluator can get employees
-            if (CurrentUserRole == "Admin" || CurrentUserRole == "Evaluator")
-            {
-                var users = await _context.Users
-                    .Where(u => u.Role.ToString() == role)
-                    .Select(u => new
-                    {
-                        u.Id,
-                        u.Name,
-                        u.Email
-                    })
-                    .ToListAsync();
+            if (CurrentUserRole is not ("Admin" or "Evaluator"))
+                return Forbid();
 
-                return Ok(users);
-            }
+            var users = await _context.Users
+                .Where(u => u.Role.ToString() == role)
+                .Select(u => new
+                {
+                    u.Id,
+                    u.Name,
+                    u.Email
+                })
+                .ToListAsync();
 
-            return Forbid();
+            return Ok(users);
         }
 
-        // GET /api/users/{id}
+        // Get public profile of a specific user by ID
         [HttpGet("{id}")]
         public async Task<IActionResult> GetUserById(Guid id)
         {

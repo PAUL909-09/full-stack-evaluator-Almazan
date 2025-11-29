@@ -30,25 +30,13 @@ const baseMenu = {
   ],
   Evaluator: [
     { to: "/evaluator/dashboard", icon: Home, label: "Dashboard" },
-    // { to: "/projects/create", icon: FolderPlus, label: "New Project" }, // UNCOMMENTED
-    // { to: "/tasks/create", icon: FilePlus, label: "Manage Task" },
     { to: "/evaluator/tasks", icon: CheckSquare, label: "Manage Tasks" },
     { to: "/evaluator/projects", icon: FolderOpen, label: "Manage Projects" },
-    // {
-    //   to: "/evaluator/assign-employees",
-    //   icon: UserPlus,
-    //   label: "Assign Employees",
-    // },
     {
       to: "/evaluator/pending",
       icon: ClipboardCheck,
       label: "Pending Evaluations",
     },
-    // {
-    //   to: "/evaluator/manage-assignments/${currentProjectId}",
-    //   icon: Users,
-    //   label: "Manage Assignments",
-    // },
     {
       to: "/evaluator/evaluation-history",
       icon: BarChart,
@@ -138,13 +126,7 @@ export default function Sidebar({ user, onLinkClick }) {
 
         {openProfile && (
           <div className="mt-3 ml-2 space-y-2 animate-fadeIn">
-            <button
-              onClick={() => alert("Profile feature coming soon!")}
-              className="flex items-center space-x-2 text-sm text-gray-700 dark:text-gray-300 hover:text-[#0A66B3] w-full text-left"
-            >
-              <User className="h-4 w-4" />
-              <span>View Profile</span>
-            </button>
+            
             <button
               onClick={handleLogout} // FIXED: wrapped in function
               className="flex items-center space-x-2 text-sm text-red-600 hover:text-red-700 w-full text-left"

@@ -9,7 +9,6 @@ namespace task_manager_api.Models
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        // Foreign keys
         [Required]
         public Guid ProjectId { get; set; }
         public Project Project { get; set; } = null!;

@@ -5,18 +5,15 @@ const TOKEN_KEY = "token";
 const REFRESH_KEY = "refreshToken";
 
 export const authService = {
+  // Login user and store access + refresh tokens
   async login(email, password) {
     try {
       const response = await api.post("/auth/login", { email, password });
       const { token, accessToken, refreshToken } = response.data;
 
-      // Use whichever the backend provides
       const finalToken = token || accessToken;
-      if (!finalToken) {
-        throw new Error("No token received from server");
-      }
+      if (!finalToken) throw new Error("No token received from server");
 
-      // ✅ Save both tokens
       localStorage.setItem(TOKEN_KEY, finalToken);
       if (refreshToken) {
         localStorage.setItem(REFRESH_KEY, refreshToken);
@@ -30,6 +27,7 @@ export const authService = {
     }
   },
 
+  // Complete invitation flow: verify OTP and set password
   async verifyInvite({ email, otp, password }) {
     try {
       const response = await api.post("/auth/verify-invite", {
@@ -43,6 +41,8 @@ export const authService = {
       throw new Error(err.response?.data?.message || "Verification failed");
     }
   },
+
+  // Decode JWT from localStorage and return current user info (id, email, role)
   getCurrentUser() {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) return null;
@@ -73,6 +73,7 @@ export const authService = {
     }
   },
 
+  // Clear tokens and redirect to login
   logout() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(REFRESH_KEY);

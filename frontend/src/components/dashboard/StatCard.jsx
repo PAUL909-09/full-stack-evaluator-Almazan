@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // frontend/src/components/dashboard/StatCard.jsx
 import React from "react";
 

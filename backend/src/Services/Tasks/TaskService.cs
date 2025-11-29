@@ -8,7 +8,6 @@ using task_manager_api.Models;
 
 namespace task_manager_api.Services.Tasks
 {
-    // Resolve ambiguity once at the top of the file
     using TaskStatus = Models.TaskStatus;
 
     public class TaskService : ITaskService
@@ -17,6 +16,7 @@ namespace task_manager_api.Services.Tasks
 
         public TaskService(ApplicationDbContext db) => _db = db;
 
+        // Get all tasks with full details (project, assignee, comments, evaluation)
         public async Task<IEnumerable<TaskItem>> GetAllAsync()
             => await _db.Tasks
                 .Include(t => t.Project)
@@ -25,6 +25,7 @@ namespace task_manager_api.Services.Tasks
                 .Include(t => t.Evaluation)
                 .ToListAsync();
 
+        // Get a single task by ID with all navigation properties
         public async Task<TaskItem?> GetByIdAsync(Guid id)
             => await _db.Tasks
                 .Include(t => t.Project)
@@ -33,6 +34,7 @@ namespace task_manager_api.Services.Tasks
                 .Include(t => t.Evaluation)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
+        // Get all tasks belonging to a specific project
         public async Task<IEnumerable<TaskItem>> GetByProjectAsync(Guid projectId)
             => await _db.Tasks
                 .Where(t => t.ProjectId == projectId)
@@ -40,6 +42,7 @@ namespace task_manager_api.Services.Tasks
                 .Include(t => t.Project)
                 .ToListAsync();
 
+        // Get all employees assigned to a project (evaluator only)
         public async Task<IEnumerable<User>> GetEmployeesByProjectAsync(Guid projectId, Guid evaluatorId)
         {
             var project = await _db.Projects.FindAsync(projectId);
@@ -53,7 +56,7 @@ namespace task_manager_api.Services.Tasks
                 .ToListAsync();
         }
 
-
+        // Create a new task in evaluator's project with validation and history logging
         public async Task<TaskItem> CreateAsync(CreateTaskDto dto, Guid evaluatorId)
         {
             var evaluator = await _db.Users.FindAsync(evaluatorId);
@@ -65,11 +68,12 @@ namespace task_manager_api.Services.Tasks
                 throw new ArgumentException("Assigned user must be an employee.");
             if (project.EvaluatorId != evaluatorId)
                 throw new UnauthorizedAccessException("You can only create tasks for your own projects.");
-            // 🔥 NEW: Validate employee belongs to the project
+
             bool isAssignedToProject = await _db.ProjectAssignments
                 .AnyAsync(pa => pa.ProjectId == dto.ProjectId && pa.UserId == dto.AssignedToId);
             if (!isAssignedToProject)
                 throw new ArgumentException("This employee is not assigned to the project.");
+
             var task = new TaskItem
             {
                 Title = dto.Title,
@@ -78,7 +82,7 @@ namespace task_manager_api.Services.Tasks
                 AssignedToId = employee.Id,
                 ProjectId = project.Id,
                 Status = TaskStatus.Todo,
-                Deadline = dto.Deadline // ← NEW: Set deadline
+                Deadline = dto.Deadline
             };
             _db.Tasks.Add(task);
             await _db.SaveChangesAsync();
@@ -86,6 +90,7 @@ namespace task_manager_api.Services.Tasks
             return task;
         }
 
+        // Update task status with role-based rules and transition validation
         public async Task<TaskItem?> UpdateStatusAsync(Guid id, TaskStatus newStatus, Guid userId, string role)
         {
             var task = await _db.Tasks
@@ -112,10 +117,57 @@ namespace task_manager_api.Services.Tasks
             task.Status = newStatus;
             await _db.SaveChangesAsync();
 
-            await LogHistoryAsync(task.Id, $"{oldStatus} → {newStatus}", null, userId);
+            await LogHistoryAsync(task.Id, $"{oldStatus} to {newStatus}", null, userId);
             return task;
         }
 
+        // Update task details (title, description, assignee, deadline) — evaluator/admin only
+        public async Task<TaskItem?> UpdateAsync(Guid id, UpdateTaskDto dto, Guid evaluatorId)
+        {
+            var task = await _db.Tasks
+                .Include(t => t.Project)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (task == null)
+                return null;
+
+            bool isAdmin = await _db.Users
+                .Where(u => u.Id == evaluatorId && u.Role == Role.Admin)
+                .AnyAsync();
+
+            if (task.Project.EvaluatorId != evaluatorId && !isAdmin)
+                throw new UnauthorizedAccessException("You can only update tasks for projects you own.");
+
+            if (!string.IsNullOrWhiteSpace(dto.Title))
+                task.Title = dto.Title;
+
+            if (dto.Description is not null)
+                task.Description = dto.Description;
+
+            if (dto.AssignedToId.HasValue)
+            {
+                var employee = await _db.Users.FindAsync(dto.AssignedToId.Value);
+                if (employee == null)
+                    throw new ArgumentException("Assigned user not found.");
+                if (employee.Role != Role.Employee)
+                    throw new ArgumentException("Assigned user must be an employee.");
+
+                task.AssignedToId = employee.Id;
+            }
+
+            if (dto.Deadline.HasValue)
+                task.Deadline = dto.Deadline;
+
+            await _db.SaveChangesAsync();
+            await LogHistoryAsync(task.Id, "Updated", null, evaluatorId);
+
+            await _db.Entry(task).Reference(t => t.AssignedTo).LoadAsync();
+            await _db.Entry(task).Reference(t => t.Project).LoadAsync();
+
+            return task;
+        }
+
+        // Delete a task — evaluator or admin only
         public async Task<bool> DeleteAsync(Guid id, Guid evaluatorId)
         {
             var task = await _db.Tasks
@@ -131,7 +183,6 @@ namespace task_manager_api.Services.Tasks
             if (task.Project.EvaluatorId != evaluatorId && !isAdmin)
                 return false;
 
-            // Log BEFORE removal to avoid FK violation
             await LogHistoryAsync(task.Id, "Deleted", null, evaluatorId);
 
             _db.Tasks.Remove(task);
@@ -140,7 +191,7 @@ namespace task_manager_api.Services.Tasks
             return true;
         }
 
-        // ────── Helpers ──────
+        // Log an action in task history
         private async Task LogHistoryAsync(Guid taskId, string action, string? comments, Guid performedById)
         {
             var history = new TaskHistory
@@ -154,66 +205,15 @@ namespace task_manager_api.Services.Tasks
             await _db.SaveChangesAsync();
         }
 
-        public async Task<TaskItem?> UpdateAsync(Guid id, UpdateTaskDto dto, Guid evaluatorId)
-        {
-            var task = await _db.Tasks
-                .Include(t => t.Project)
-                .FirstOrDefaultAsync(t => t.Id == id);
-
-            if (task == null)
-                return null;
-
-            // Allow the project's evaluator or an Admin to update the task
-            bool isAdmin = await _db.Users
-                .Where(u => u.Id == evaluatorId && u.Role == Role.Admin)
-                .AnyAsync();
-
-            if (task.Project.EvaluatorId != evaluatorId && !isAdmin)
-                throw new UnauthorizedAccessException("You can only update tasks for projects you own.");
-
-            // Update fields when provided (null => keep existing)
-            if (!string.IsNullOrWhiteSpace(dto.Title))
-                task.Title = dto.Title;
-
-            // allow empty string as intentional reset? we use null as no-change
-            if (dto.Description is not null)
-                task.Description = dto.Description;
-
-            if (dto.AssignedToId.HasValue)
-            {
-                var employee = await _db.Users.FindAsync(dto.AssignedToId.Value);
-                if (employee == null)
-                    throw new ArgumentException("Assigned user not found.");
-                if (employee.Role != Role.Employee)
-                    throw new ArgumentException("Assigned user must be an employee.");
-
-                task.AssignedToId = employee.Id;
-            }
-
-            if (dto.Deadline.HasValue)  // NEW: Update deadline if provided
-                task.Deadline = dto.Deadline;
-
-
-            await _db.SaveChangesAsync();
-            await LogHistoryAsync(task.Id, "Updated", null, evaluatorId);
-
-            // reload include navigation properties for response if necessary
-            await _db.Entry(task).Reference(t => t.AssignedTo).LoadAsync();
-            await _db.Entry(task).Reference(t => t.Project).LoadAsync();
-
-            return task;
-        }
-
+        // Validate allowed status transitions based on user role
         private static bool IsValidStatusTransition(TaskStatus from, TaskStatus to, string role)
         {
             return (from, to, role) switch
             {
-                // Employee flow
                 (_, TaskStatus.InProgress, "Employee") => from == TaskStatus.Todo,
                 (_, TaskStatus.Done, "Employee") => from == TaskStatus.InProgress,
                 (_, TaskStatus.Submitted, "Employee") => from == TaskStatus.Done,
 
-                // Evaluator review
                 (_, TaskStatus.Approved, "Evaluator") => true,
                 (_, TaskStatus.NeedsRevision, "Evaluator") => true,
                 (_, TaskStatus.Rejected, "Evaluator") => true,

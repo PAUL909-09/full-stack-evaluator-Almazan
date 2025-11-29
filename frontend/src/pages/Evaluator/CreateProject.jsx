@@ -1,4 +1,3 @@
-// frontend/src/pages/Evaluator/CreateProject.jsx
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 import api from "@/api/axios";

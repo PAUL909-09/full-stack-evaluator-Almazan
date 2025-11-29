@@ -1,5 +1,4 @@
 /* eslint-disable no-unused-vars */
-// frontend/src/pages/Admin/Projects/ProjectAnalytics.jsx
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import adminService from "@/services/adminService";

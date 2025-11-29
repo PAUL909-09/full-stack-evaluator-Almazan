@@ -13,13 +13,11 @@ namespace task_manager_api.Models
         [Required]
         public Guid TaskId { get; set; }
 
-        // EF navigation - null! is correct here
         public TaskItem Task { get; set; } = null!;
 
         [Required]
         public Guid EvaluatorId { get; set; }
 
-        // EF navigation - null! is correct here
         public User Evaluator { get; set; } = null!;
 
         [Required]

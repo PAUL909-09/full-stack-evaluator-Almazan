@@ -15,6 +15,7 @@ namespace task_manager_api.Services.Employees
             _db = db;
         }
 
+        // Get all tasks assigned to the current logged-in employee with project and evaluation details
         public async Task<IEnumerable<EmployeeTaskDto>> GetMyTasksAsync(ClaimsPrincipal user)
         {
             var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier);

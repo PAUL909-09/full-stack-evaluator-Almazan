@@ -1,6 +1,5 @@
 // frontend/src/pages/Evaluator/EvaluatorDashboard.jsx
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // For navigation
 import api from "@/api/axios";
 import { Button } from "@/components/ui/button"; // For the new button
 import { toast } from "react-toastify";
@@ -14,7 +13,6 @@ import {
 } from "lucide-react"; // Added icons
 
 export default function EvaluatorDashboard() {
-  const navigate = useNavigate(); // For navigating to TaskReviews
   const [stats, setStats] = useState({
     totalTasks: 0,
     pendingEvaluations: 0,

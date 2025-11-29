@@ -5,7 +5,6 @@ using task_manager_api.Helpers;
 using task_manager_api.Models;
 using task_manager_api.Data;
 
-
 namespace task_manager_api.Controllers.Auth
 {
     [ApiController]
@@ -26,6 +25,7 @@ namespace task_manager_api.Controllers.Auth
             public string RefreshToken { get; set; } = string.Empty;
         }
 
+        // Refresh access token using a valid refresh token (with rotation)
         [HttpPost("refresh")]
         public IActionResult Refresh([FromBody] RefreshRequest request)
         {
@@ -35,18 +35,17 @@ namespace task_manager_api.Controllers.Auth
             var user = _context.Users.SingleOrDefault(u =>
                 u.RefreshToken == request.RefreshToken &&
                 u.RefreshTokenExpiry.HasValue &&
-                u.RefreshTokenExpiry > DateTime.UtcNow
-            );
+                u.RefreshTokenExpiry > DateTime.UtcNow);
 
             if (user == null)
                 return Unauthorized(new { message = "Invalid or expired refresh token." });
 
             var secret = _config["Jwt:Secret"]
-    ?? throw new InvalidOperationException("JWT secret not configured");
+                ?? throw new InvalidOperationException("JWT secret not configured");
 
             var newAccessToken = JwtTokenHelper.GenerateAccessToken(user, secret);
 
-            // Rotate refresh token for security
+            // Rotate refresh token for enhanced security
             user.RefreshToken = JwtTokenHelper.GenerateRefreshToken();
             user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(30);
             _context.SaveChanges();

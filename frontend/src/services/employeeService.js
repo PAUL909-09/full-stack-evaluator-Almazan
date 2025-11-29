@@ -2,8 +2,10 @@
 import api from "@/api/axios";
 
 const employeeService = {
+  // Get all tasks assigned to the current logged-in employee
   getMyTasks: () => api.get("/employees/tasks"),
-  
+
+  // Calculate task statistics from the current employee's task list
   getMyStats: async () => {
     const response = await api.get("/employees/tasks");
     const tasks = response.data;
@@ -19,6 +21,7 @@ const employeeService = {
     };
   },
 
+  // Update task status and optionally upload proof file (when submitting)
   updateTaskStatus: (taskId, status, file = null) => {
     const formData = new FormData();
     formData.append("status", status);

@@ -7,7 +7,7 @@ namespace task_manager_api.Controllers
 {
     [ApiController]
     [Route("api/dashboard")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")] // Only admins can access dashboard
     public class DashboardController : ControllerBase
     {
         private readonly AdminService _adminService;
@@ -17,6 +17,7 @@ namespace task_manager_api.Controllers
             _adminService = adminService;
         }
 
+        // Get key statistics for the admin dashboard (users, projects, tasks)
         [HttpGet]
         public async Task<IActionResult> GetDashboard()
         {

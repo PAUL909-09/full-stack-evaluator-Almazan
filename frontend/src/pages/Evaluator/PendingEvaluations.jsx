@@ -46,7 +46,6 @@ export default function PendingEvaluations() {
     loadPendingTasks();
   }, []);
 
-  // Load evaluations for all tasks
   const loadEvaluations = async (taskList) => {
     setEvaluationsLoading(true);
     try {

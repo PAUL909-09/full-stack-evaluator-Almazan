@@ -22,7 +22,7 @@ namespace task_manager_api.Services
                 ?? throw new InvalidOperationException("Jwt:Secret not configured");
         }
 
-        // 1️⃣ ADMIN INVITES USER (SEND OTP)
+        // Send invitation with OTP to new user (admin only)
         public async Task<User> InviteUserAsync(string name, string email, Role role)
         {
             var existing = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
@@ -55,7 +55,7 @@ namespace task_manager_api.Services
             return user;
         }
 
-        // 2️⃣ VERIFY OTP
+        // Verify OTP from invitation email
         public async Task<bool> VerifyOtpAsync(string email, string otp)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
@@ -77,7 +77,7 @@ namespace task_manager_api.Services
             return true;
         }
 
-        // 3️⃣ SET PASSWORD
+        // Set password after successful OTP verification
         public async Task<bool> SetPasswordAsync(string email, string password)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
@@ -89,7 +89,7 @@ namespace task_manager_api.Services
             return true;
         }
 
-        // 4️⃣ LOGIN WITH REFRESH TOKEN SUPPORT
+        // Authenticate user and issue access + refresh tokens
         public async Task<(string AccessToken, string RefreshToken)?> Login(string email, string password)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
@@ -109,7 +109,7 @@ namespace task_manager_api.Services
             return (accessToken, refreshToken);
         }
 
-        // 5️⃣ VALIDATE USER (used by controller refresh endpoint)
+        // Validate user credentials (used by refresh token endpoint)
         public async Task<User?> ValidateUserAsync(string email, string password)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);

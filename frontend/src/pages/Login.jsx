@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // frontend/src/pages/Login.jsx
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";

@@ -12,16 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 
-/**
- * A reusable confirmation modal with animation and dynamic design.
- * Props:
- * - open: boolean → whether modal is visible
- * - title: string → modal title
- * - message: string → message to display
- * - type: "warning" | "success" | "error" (optional) → changes icon & color
- * - onConfirm: () => void → confirm action
- * - onCancel: () => void → cancel/close action
- */
 const ConfirmModal = ({
   open,
   title = "Are you sure?",

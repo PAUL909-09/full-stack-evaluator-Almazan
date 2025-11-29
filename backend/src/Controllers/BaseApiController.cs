@@ -14,6 +14,7 @@ namespace task_manager_api.Controllers
             _httpContextAccessor = httpContextAccessor;
         }
 
+        // Extracts current user's ID and role from JWT claims
         protected (Guid userId, string role) GetCurrentUser()
         {
             var user = _httpContextAccessor.HttpContext!.User;

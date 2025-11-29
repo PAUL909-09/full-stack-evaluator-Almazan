@@ -14,9 +14,9 @@ namespace task_manager_api.Services
             _config = config;
         }
 
+        // Send HTML email using SMTP (configured via appsettings.json)
         public async Task SendEmailAsync(string toEmail, string subject, string body)
         {
-            // Safely fetch configuration values
             var fromEmail = _config["Email:From"] 
                 ?? throw new InvalidOperationException("Email:From not configured in appsettings.json");
 
@@ -36,22 +36,22 @@ namespace task_manager_api.Services
 
             using var mail = new MailMessage(fromEmail, toEmail, subject, body)
             {
-                IsBodyHtml = true // allows HTML content
+                IsBodyHtml = true
             };
 
             try
             {
                 await client.SendMailAsync(mail);
-                Console.WriteLine($"✅ Email sent to {toEmail}");
+                Console.WriteLine($"Email sent to {toEmail}");
             }
             catch (SmtpException ex)
             {
-                Console.WriteLine($"❌ SMTP Error sending email to {toEmail}: {ex.Message}");
-                throw; // rethrow so caller can handle/log it
+                Console.WriteLine($"SMTP Error sending email to {toEmail}: {ex.Message}");
+                throw;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ General error sending email to {toEmail}: {ex.Message}");
+                Console.WriteLine($"General error sending email to {toEmail}: {ex.Message}");
                 throw;
             }
         }

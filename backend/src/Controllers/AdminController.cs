@@ -9,7 +9,7 @@ namespace task_manager_api.Controllers
 {
     [ApiController]
     [Route("api/admin")]
-    [Authorize(Roles = "Admin")] // Restrict to admins
+    [Authorize(Roles = "Admin")]
     public class AdminController : ControllerBase
     {
         private readonly AuthService _authService;
@@ -21,7 +21,7 @@ namespace task_manager_api.Controllers
             _adminService = adminService;
         }
 
-        // GET /api/admin/analytics
+        // Get overall analytics for the admin dashboard
         [HttpGet("analytics")]
         public async Task<IActionResult> GetAnalytics()
         {
@@ -29,11 +29,10 @@ namespace task_manager_api.Controllers
             return Ok(data);
         }
 
-        // 📨 POST /api/admin/invite
+        // Send invitation to a new user (name, email, role)
         [HttpPost("invite")]
         public async Task<IActionResult> InviteUser([FromBody] InviteDto dto)
         {
-            // Logic unchanged, but now consistent with service pattern
             if (string.IsNullOrEmpty(dto.Email) || string.IsNullOrEmpty(dto.Name))
                 return BadRequest(new { message = "Name and Email are required." });
 
@@ -50,7 +49,7 @@ namespace task_manager_api.Controllers
             });
         }
 
-        // 📋 GET /api/admin/pending-invites
+        // List all pending (unaccepted) user invitations
         [HttpGet("pending-invites")]
         public async Task<IActionResult> GetPendingInvites()
         {
@@ -58,7 +57,7 @@ namespace task_manager_api.Controllers
             return Ok(invites);
         }
 
-        // GET /api/admin/dashboard
+        // Get summary stats for the admin dashboard (users, tasks, etc.)
         [HttpGet("dashboard")]
         public async Task<IActionResult> GetDashboardSummary()
         {
@@ -66,14 +65,15 @@ namespace task_manager_api.Controllers
             return Ok(data);
         }
 
-
+        // Get analytics data broken down by project
         [HttpGet("projects/analytics")]
         public async Task<IActionResult> GetProjectAnalytics()
         {
             var projects = await _adminService.GetProjectAnalyticsAsync();
             return Ok(projects);
         }
-        // DTO for invites (unchanged)
+
+        // DTO for invite endpoint
         public class InviteDto
         {
             public string Name { get; set; } = string.Empty;
