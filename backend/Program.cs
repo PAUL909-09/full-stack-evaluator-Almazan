@@ -93,11 +93,10 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // === MIDDLEWARE ORDER THAT ACTUALLY WORKS ===
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskManager API v1"));
-}
+
+app.UseSwagger();
+app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "TaskManager API v1"));
+
 
 // REMOVE THESE TWO LINES COMPLETELY IN DEV
 // app.UseHttpsRedirection();   // ← KILLER #1
