@@ -5,5 +5,6 @@ namespace task_manager_api.Dtos
         string? Description,
         Guid ProjectId,
         Guid CreatedById,
-        Guid AssignedToId);
+        Guid AssignedToId,
+        DateTime? Deadline);
 }

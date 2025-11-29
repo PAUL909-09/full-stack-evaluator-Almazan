@@ -33,6 +33,7 @@ namespace task_manager_api.Services.Employees
                 Title = t.Title,
                 Description = t.Description,
                 Status = t.Status.ToString(),
+                Deadline = t.Deadline,
                 SubmittedAt = t.SubmittedAt,
                 ProofFilePath = t.ProofFilePath,
                 ProjectName = t.Project?.Name,

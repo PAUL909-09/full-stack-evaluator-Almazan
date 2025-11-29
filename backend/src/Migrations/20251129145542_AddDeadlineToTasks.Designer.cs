@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using task_manager_api.Data;
@@ -11,9 +12,11 @@ using task_manager_api.Data;
 namespace task_manager_api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251129145542_AddDeadlineToTasks")]
+    partial class AddDeadlineToTasks
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -155,7 +158,7 @@ namespace task_manager_api.Migrations
                     b.Property<Guid>("PerformedById")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("TaskId")
+                    b.Property<Guid>("TaskId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -343,7 +346,8 @@ namespace task_manager_api.Migrations
                     b.HasOne("task_manager_api.Models.TaskItem", "Task")
                         .WithMany("History")
                         .HasForeignKey("TaskId")
-                        .OnDelete(DeleteBehavior.SetNull);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("PerformedBy");
 

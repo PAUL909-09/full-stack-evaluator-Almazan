@@ -227,26 +227,7 @@ export default function PendingEvaluations() {
                     </Button>
                   )}
 
-                  {/* ✅ NEW: History Section */}
-                  <details className="border-t bg-gray-50 px-4 py-3 text-sm">
-                    <summary className="cursor-pointer font-medium text-gray-700">
-                      History ({task.taskHistories?.length || 0} entries)
-                    </summary>
-                    <ul className="mt-2 space-y-1 text-xs text-gray-600">
-                      {task.taskHistories?.length > 0 ? (
-                        task.taskHistories.map((h, i) => (
-                          <li key={i}>
-                            <strong>{h.action}</strong> by{" "}
-                            {h.performedBy?.name || "Unknown"} @{" "}
-                            {new Date(h.performedAt).toLocaleString()}
-                            {h.comments && <span> - {h.comments}</span>}
-                          </li>
-                        ))
-                      ) : (
-                        <li>No history available.</li>
-                      )}
-                    </ul>
-                  </details>
+                 
                 </CardContent>
               </Card>
             );

@@ -30,6 +30,8 @@ namespace task_manager_api.Models
 
         public TaskStatus Status { get; set; } = TaskStatus.Todo;
 
+        public DateTime? Deadline { get; set; }
+
         // Foreign Keys
         public Guid ProjectId { get; set; }
         public Project Project { get; set; } = null!;

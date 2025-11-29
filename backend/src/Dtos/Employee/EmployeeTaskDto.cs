@@ -9,6 +9,7 @@ namespace task_manager_api.Dtos.Employee
         public string? ProjectName { get; set; }
         public DateTime? SubmittedAt { get; set; }
         public string? ProofFilePath { get; set; }
+        public DateTime? Deadline { get; set; }
         public TaskEvaluationDto? Evaluation { get; set; }
     }
 }

@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import DataTable from "@/components/table/DataTable";
 import employeeService from "@/services/employeeService";
-
+import StatCard from "@/components/dashboard/StatCard";
+import { getStatusConfig } from "@/config/taskStatusConfig";
 import {
   CheckCircle,
   Clock,
@@ -44,37 +45,44 @@ const EmployeeDashboard = () => {
     {
       label: "Total Tasks",
       value: stats?.total || 0,
-      icon: <CheckSquare className="text-blue-600 w-6 h-6" />,
+      icon: CheckSquare,
+      color: "text-blue-600",
     },
     {
       label: "To Do",
       value: stats?.todo || 0,
-      icon: <Clock className="text-yellow-600 w-6 h-6" />,
+      icon: Clock,
+      color: "text-yellow-600",
     },
     {
       label: "In Progress",
       value: stats?.inProgress || 0,
-      icon: <Hourglass className="text-purple-600 w-6 h-6" />,
+      icon: Hourglass,
+      color: "text-purple-600",
     },
     {
       label: "Submitted",
       value: stats?.submitted || 0,
-      icon: <AlertTriangle className="text-blue-500 w-6 h-6" />,
+      icon: AlertTriangle,
+      color: "text-blue-500",
     },
     {
       label: "Approved",
       value: stats?.approved || 0,
-      icon: <CheckCircle className="text-green-600 w-6 h-6" />,
+      icon: CheckCircle,
+      color: "text-green-600",
     },
     {
       label: "Needs Revision",
       value: stats?.needsRevision || 0,
-      icon: <AlertTriangle className="text-orange-500 w-6 h-6" />,
+      icon: AlertTriangle,
+      color: "text-orange-500",
     },
     {
       label: "Rejected",
       value: stats?.rejected || 0,
-      icon: <XCircle className="text-red-600 w-6 h-6" />,
+      icon: XCircle,
+      color: "text-red-600",
     },
   ];
 
@@ -97,15 +105,13 @@ const EmployeeDashboard = () => {
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.04 }}
-            className="p-5 rounded-2xl bg-white shadow-md border border-[#A0DCFC]/40 hover:shadow-lg transition-all"
           >
-            <div className="flex justify-between items-center">
-              <p className="text-gray-600 font-medium">{card.label}</p>
-              {card.icon}
-            </div>
-            <p className="mt-3 text-3xl font-bold text-[#0A66B3]">
-              {card.value}
-            </p>
+            <StatCard
+              icon={card.icon}
+              label={card.label}
+              value={card.value}
+              color={card.color}
+            />
           </motion.div>
         ))}
       </div>
@@ -119,11 +125,28 @@ const EmployeeDashboard = () => {
           title="My Tasks"
           columns={[
             { key: "title", label: "Title" },
-            { key: "priority", label: "Priority" },
-            { key: "dueDate", label: "Due Date" },
+            { key: "deadline", label: "Deadline" },
             { key: "status", label: "Status" },
           ]}
-          data={tasks}
+          data={tasks.map((task) => {
+            const statusConfig = getStatusConfig(task.status);
+            const StatusIcon = statusConfig.icon;
+            return {
+              ...task,
+              status: (
+                <span
+                  className={`inline-flex items-center text-xs font-semibold ${statusConfig.color.replace(
+                    "bg-",
+                    "text-"
+                  )}`}
+                >
+                  <StatusIcon className="w-4 h-4 mr-1" />
+                  {statusConfig.label}
+                </span>
+              ),
+              deadline: task.deadline ? new Date(task.deadline).toLocaleDateString() : "N/A",
+            };
+          })}
         />
       </motion.div>
     </div>

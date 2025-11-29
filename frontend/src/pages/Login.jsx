@@ -121,28 +121,18 @@ export default function Login() {
                 Sign In
               </Button>
 
-              <p className="text-center text-sm text-sky-800/80 dark:text-gray-300 pt-2">
-                Forgot your password?{" "}
-                <a
-                  href="#"
-                  className="text-blue-600 dark:text-sky-400 hover:underline"
+              <p className="text-center mt-5 text-sm text-sky-800/80 dark:text-gray-300">
+                Invited by your admin?{" "}
+                <Link
+                  to="/verify-invite"
+                  className="text-blue-600 dark:text-sky-400 hover:underline font-medium"
                 >
-                  Reset here
-                </a>
+                  Verify your account
+                </Link>
               </p>
             </form>
           </CardContent>
         </Card>
-
-        <p className="text-center mt-5 text-sm text-sky-800/80 dark:text-gray-300">
-          Invited by your admin?{" "}
-          <Link
-            to="/verify-invite"
-            className="text-blue-600 dark:text-sky-400 hover:underline font-medium"
-          >
-            Verify your account
-          </Link>
-        </p>
       </motion.div>
     </div>
   );

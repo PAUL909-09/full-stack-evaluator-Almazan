@@ -182,13 +182,19 @@ namespace task_manager_api.Controllers
         [Authorize(Roles = "Evaluator,Admin")]
         public async Task<IActionResult> Delete(Guid id)
         {
-            var (userId, _) = GetCurrentUser();
-
-            var success = await _taskService.DeleteAsync(id, userId);
-
-            return success
-                ? NoContent()
-                : NotFound("Task not found or you don't have permission to delete it.");
+            try
+            {
+                var (userId, _) = GetCurrentUser();
+                var success = await _taskService.DeleteAsync(id, userId);
+                return success
+                    ? NoContent()
+                    : NotFound("Task not found or you don't have permission to delete it.");
+            }
+            catch (Exception ex)
+            {
+                // Log the exception (e.g., via ILogger)
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
         }
 
         // ---------------------------------------------------------------

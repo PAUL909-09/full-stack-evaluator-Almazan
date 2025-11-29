@@ -49,8 +49,9 @@ namespace task_manager_api.Data
             // -------- Task History Relationships --------
             modelBuilder.Entity<TaskHistory>()
                 .HasOne(th => th.Task)
-                .WithMany(t => t.History)
-                .HasForeignKey(th => th.TaskId);
+                .WithMany(t => t.History) // ← Restored reference to navigation property
+                .HasForeignKey(th => th.TaskId)
+                .OnDelete(DeleteBehavior.SetNull); // ← Preserves history by setting TaskId to null on delete
 
             modelBuilder.Entity<TaskHistory>()
                 .HasOne(th => th.PerformedBy)

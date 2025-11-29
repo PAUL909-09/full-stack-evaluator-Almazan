@@ -10,7 +10,9 @@ export async function getTasksByProject(projectId) {
     const { data } = await api.get(`/tasks/project/${projectId}`);
     return data;
   } catch (error) {
-    throw new Error(error.response?.data?.message || "Failed to get tasks by project");
+    throw new Error(
+      error.response?.data?.message || "Failed to get tasks by project"
+    );
   }
 }
 
@@ -26,7 +28,6 @@ export async function getEmployeesByProject(projectId) {
 //   const { data } = await api.get(`/projectassignments/project/${projectId}`);
 //   return data.map(a => a.user); // depends on backend shape
 // }
-
 
 /**
  * GET /tasks/{id}
@@ -69,6 +70,5 @@ export async function updateTaskStatus(id, newStatus) {
  * Delete a task
  */
 export async function deleteTask(id) {
-  const { data } = await api.delete(`/tasks/${id}`);
-  return data;
+  await api.delete(`/tasks/${id}`);
 }
