@@ -27,11 +27,10 @@ A **production-ready, fully documented React frontend** for the Evaluator platfo
 * ⚛️ **React 18 + Vite** — Lightning-fast modern setup
 * 🌐 **Axios** — HTTP client with interceptors & token handling
 * 🧭 **React Router DOM** — Role-driven route structure
-* 🎨 **CSS Modules / Tailwind (optional)** — Clean, flexible styling
+* 🎨 **Tailwind** — Clean, flexible styling
 * 🧠 **Local state only** — No Redux / No Context (simplicity by design)
 * 📤 **Native FormData uploads**
-* 🔔 **react-hot-toast** (optional) — Non-intrusive notifications
-
+* 🔔 **react-hot-toast**
 ---
 
 ## 📁 Project Structure
