@@ -33,8 +33,7 @@ A **rock-solid, enterprise-ready backend** built with **.NET 9**, **Entity Frame
 * 🔐 **JWT + BCrypt + Refresh Token** authentication
 * ✉️ **SMTP Email** for OTP + invitations
 * 📁 **Local file storage** (`/wwwroot/uploads/tasks`) with GUID filenames
-* 🔄 **IHostedService** for recurring maintenance
-* 📄 **Swagger/OpenAPI** for auto-generated API docs
+* 📄 **Swagger**
 
 ---
 
