@@ -90,8 +90,13 @@ npm run dev
 npm run build
 ```
 
-Output is generated in `/dist` — deployable on **Vercel**, **Netlify**, or served via any backend.
+## 🧩 Environment Setup (Required)
 
+Before running the frontend, create a .env file in the root of the frontend/ directory:
+
+```bash
+VITE_API_URL=http://localhost:5000/api
+```
 ---
 
 ## 🧪 End-to-End Flow (Manual Testing Guide)
